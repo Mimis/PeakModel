@@ -40,7 +40,7 @@ public class SearchLuceneIndex {
 		String indexKbCorpusFileName = "./index/KbCorpus";
 		String dutchStopWordFile = "./data/stopWords/dutch.txt";
 		String experimentsFile = "./experiments/testQueryTF.csv";
-		int topBestTerms = 3;
+		int topBestTerms = 100;
 		//==========================================================//
 		
         
@@ -52,9 +52,19 @@ public class SearchLuceneIndex {
         int totalNumberOfDocumentsWithContent = -1;
 		int totalNumberOfRelevantDocuments = -1;
 		int totalNumberOfDocumentsInGivenPeriod = -1;
-		int totalNumberOfDocumentsWithTitleInGivenPeriod = -1;
-		int totalNumberOfDocumentsWithContentInGivenPeriod = -1;
+//		int totalNumberOfDocumentsWithTitleInGivenPeriod = -1;
+//		int totalNumberOfDocumentsWithContentInGivenPeriod = -1;
 		List<NGram> ngramList = new ArrayList<NGram>();
+		
+		/*
+		 * Queries
+		 */
+        String query = "\""+ "griek" + "\"";
+		String date = "date:[1980-05-05 TO 1980-05-05]";
+		//This queries shoudl use to find out how many docs got content for each field separate in a specific period
+//		String titleDate = "title:{* TO *} AND " + date;
+//		String contentDate = "content:{* TO *} AND " + date;
+        String wholeQuery = query + " AND " + date;
 		//==========================================================//
         
         
@@ -71,16 +81,7 @@ public class SearchLuceneIndex {
         
         
         
-        /**
-		 * Queries
-		 */
-        String query = "\""+ "griek" + "\"";
-		String date = "date:[1980-05-05 TO 1980-05-05]";
-		//This queries shoudl use to find out how many docs got content for each field separate in a specific period
-		String titleDate = "title:{* TO *} AND " + date;
-		String contentDate = "content:{* TO *} AND " + date;
-        String wholeQuery = query + " AND " + date;
-
+        
 
         
         

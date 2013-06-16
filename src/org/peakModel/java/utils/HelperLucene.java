@@ -64,11 +64,10 @@ public class HelperLucene {
 	}
 	
 	
-	public static IndexWriter getIndexWriter(Directory indexDir, Analyzer analyzer, boolean createNew,double setRAMBufferSizeMB) throws IOException{
+	public static IndexWriter getIndexWriter(Directory indexDir, Analyzer analyzer, boolean createNewIndex,double setRAMBufferSizeMB) throws IOException{
 		IndexWriterConfig indexWriterConfig = new IndexWriterConfig(Version.LUCENE_43, analyzer);
 		indexWriterConfig.setRAMBufferSizeMB(setRAMBufferSizeMB);
-		
-		if(createNew)
+		if(createNewIndex)
 			indexWriterConfig.setOpenMode(OpenMode.CREATE); 
 		IndexWriter indexWriter = new IndexWriter(indexDir, indexWriterConfig);
 		return indexWriter;

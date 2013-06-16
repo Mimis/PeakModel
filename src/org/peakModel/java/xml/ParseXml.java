@@ -15,6 +15,7 @@ public class ParseXml {
 	public static void main(String[] args) {
 		long startTime = System.currentTimeMillis();
 
+		String kbDataForIndexing = "../data/1980.nodupes.xml";
 		try {
 
 			SAXParserFactory factory = SAXParserFactory.newInstance();
@@ -30,7 +31,8 @@ public class ParseXml {
 				String indexKbCorpusFileName = "../index/KBcorpus";
 				String dutchStopWordFile = "../data/stopWords/dutch.txt";
 				double setRAMBufferSizeMB = 1024;
-				IndexingKbCorpus indexingKbCorpus = new IndexingKbCorpus(indexKbCorpusFileName, dutchStopWordFile,setRAMBufferSizeMB);
+				//upadte index;dont create from scratch
+				IndexingKbCorpus indexingKbCorpus = new IndexingKbCorpus(indexKbCorpusFileName, dutchStopWordFile,setRAMBufferSizeMB,false);
 
 				boolean date = false;
 				String DateValue = null;
@@ -151,7 +153,7 @@ public class ParseXml {
 
 			};
 
-			saxParser.parse("../data/1980.nodupes.xml", handler);
+			saxParser.parse(kbDataForIndexing, handler);
 
 			//timer
 	        long endTime = System.currentTimeMillis();

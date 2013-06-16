@@ -29,14 +29,14 @@ public class IndexingKbCorpus {
 	 * @param contentFieldType
 	 * @throws IOException 
 	 */
-	public IndexingKbCorpus(String indexKbCorpusFileName,String dutchStopWordFile,double setRAMBufferSizeMB) throws IOException {
+	public IndexingKbCorpus(String indexKbCorpusFileName,String dutchStopWordFile,double setRAMBufferSizeMB,boolean createNewIndex) throws IOException {
 		super();
 		this.indexKbCorpusFileName = indexKbCorpusFileName;
 		this.dutchStopWordFile = dutchStopWordFile;
 		// get fieldTypes for title and content
 		this.titleFieldType = getArticleTitleFieldType();
 		this.contentFieldType = getArticleContentFieldType();
-		this.indexWriter = getKbIndexWriter(setRAMBufferSizeMB);
+		this.indexWriter = getKbIndexWriter(setRAMBufferSizeMB,createNewIndex);
 	}
 
 
@@ -49,8 +49,9 @@ public class IndexingKbCorpus {
 
 		String indexKbCorpusFileName = "./index/test";
 		String dutchStopWordFile = "./data/stopWords/dutch.txt";
-		double setRAMBufferSizeMB = 2024;
-		IndexingKbCorpus indexingKbCorpus = new IndexingKbCorpus(indexKbCorpusFileName, dutchStopWordFile,setRAMBufferSizeMB);
+		double setRAMBufferSizeMB = 1024;
+		boolean createNewIndex = false;
+		IndexingKbCorpus indexingKbCorpus = new IndexingKbCorpus(indexKbCorpusFileName, dutchStopWordFile,setRAMBufferSizeMB,createNewIndex);
 		
 		
 		/*
@@ -81,7 +82,7 @@ public class IndexingKbCorpus {
 		HelperLucene.closeIndexWriter(this.getIndexWriter());
 	}
 	
-	public IndexWriter getKbIndexWriter(double setRAMBufferSizeMB) throws IOException{
+	public IndexWriter getKbIndexWriter(double setRAMBufferSizeMB, boolean createNewIndex) throws IOException{
 		/*
 		 * Index Dir
 		 */
@@ -95,7 +96,7 @@ public class IndexingKbCorpus {
         /*
          * InderWriter
          */
-		IndexWriter indexWriter = HelperLucene.getIndexWriter(indexDir, analyzer, true, setRAMBufferSizeMB);
+		IndexWriter indexWriter = HelperLucene.getIndexWriter(indexDir, analyzer, createNewIndex, setRAMBufferSizeMB);
 	
 		return indexWriter;
 	}
