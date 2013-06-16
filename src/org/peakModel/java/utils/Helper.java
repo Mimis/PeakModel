@@ -1,9 +1,12 @@
 package org.peakModel.java.utils;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -41,5 +44,14 @@ public class Helper {
 	public static double log2( double a ){
 		return Math.log(a) / Math.log(2);
 	}
+	
+	public static void writeLineToFile(String filename, String text, boolean append, boolean addNewLine) throws IOException{
+		BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(filename,append),"UTF8"));
+		out.write(text);
+		if(addNewLine)
+			out.write("\n");
+		out.close();
+	}
+
 }
 

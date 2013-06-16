@@ -19,6 +19,7 @@ import org.apache.lucene.search.TotalHitCountCollector;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.Version;
 import org.peakModel.java.ngram.NGram;
+import org.peakModel.java.utils.Helper;
 import org.peakModel.java.utils.HelperLucene;
 
 public class SearchLuceneIndex {
@@ -38,9 +39,10 @@ public class SearchLuceneIndex {
 		//==========================================================//
 		String indexKbCorpusFileName = "./index/KbCorpus";
 		String dutchStopWordFile = "./data/stopWords/dutch.txt";
+		String experimentsFile = "./experiments/testQueryTF.csv";
 		int topBestTerms = 3;
 		//==========================================================//
-
+		
         
 		/*
 		 * Variables
@@ -138,11 +140,14 @@ public class SearchLuceneIndex {
         }
 
         /*
-         * 4. Sort NGrams
+         * 4. Sort NGrams By:
+         * 	a.TF
+         *  b.PMI_classic
+         *  c.PMI_time
          */
-//        Collections.sort(ngramList, NGram.COMPARATOR_TOTAL_TF);
+        Collections.sort(ngramList, NGram.COMPARATOR_TOTAL_TF);
 //        Collections.sort(ngramList, NGram.COMPARATOR_PMI_CLASSIC);
-        Collections.sort(ngramList, NGram.COMPARATOR_PMI_TIME);
+//        Collections.sort(ngramList, NGram.COMPARATOR_PMI_TIME);
         
         
         
@@ -156,10 +161,13 @@ public class SearchLuceneIndex {
         System.out.println("TotalNumberOfRelevantDocuments:"+totalNumberOfRelevantDocuments);
         System.out.println("TotalNumberOfDocumentsInGivenPeriod:"+totalNumberOfDocumentsInGivenPeriod+"\tTotalNumberOfDocumentWithTitle:"+totalNumberOfDocumentsWithTitle + "\tTotalNumberOfDocumentWithContent:"+totalNumberOfDocumentsWithContent);
         System.out.println("====================================================================================================");
-    	System.out.println("ngram ,total_tf_query,P_w,P_w_Given_query_time,P_w_Given_time,PMI_classic,PMI_time");
+        String csvExpnationOutput = "ngram ,total_tf_query,P_w,P_w_Given_query_time,P_w_Given_time,PMI_classic,PMI_time";
+    	System.out.println(csvExpnationOutput);
+        Helper.writeLineToFile(experimentsFile,csvExpnationOutput, false,true);
     	int countTerms = 1;
         for(NGram ngram:ngramList){
         	System.out.println(ngram.toStringCsvCompact());
+        	Helper.writeLineToFile(experimentsFile, ngram.toStringCsvCompact(), true, true);
         	if(countTerms++ >= topBestTerms)
         		break;
         }
