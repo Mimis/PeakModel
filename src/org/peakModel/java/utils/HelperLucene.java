@@ -59,8 +59,8 @@ public class HelperLucene {
 		return topDocs;
 	}
 	
-	public static void closeIndexWriter(IndexWriter indexWriter) throws IOException{
-		indexWriter.close();
+	public static void closeIndexWriter(IndexWriter indexWriter,boolean executeIndexMerge) throws IOException{
+		indexWriter.close(executeIndexMerge);
 	}
 	
 	
@@ -105,15 +105,21 @@ public class HelperLucene {
 		}
 	}
 
-	public static void mapTermVectorToNGramList(DirectoryReader reader,Terms terms,TermsEnum termsEnum,String field,List<NGram> ngramList) throws IOException{
+	public static void mapTermVectorToNGramList(DirectoryReader reader,Terms terms,TermsEnum termsEnum,String field,List<NGram> ngramList,String ngram_type) throws IOException{
 		if (terms != null) {
 			termsEnum = terms.iterator(termsEnum);
 			BytesRef text;
 			while ((text = termsEnum.next()) != null) {
+				
 				final String term = text.utf8ToString();
+				String currentNgram_type = HelperLucene.getNgramType(term);
+				if(!ngram_type.equals(currentNgram_type) && !ngram_type.equals("MIX"))
+					continue;
+				
 				NGram newNGram = new NGram(term,field);
 				//this we need it anyway to retrieve it in both cases
-				final int total_tf_query = (int) termsEnum.totalTermFreq();
+				final int total_tf_query = (int) termsEnum.totalTermFreq();			
+				
 				int indexOfNgram = ngramList.indexOf(newNGram);
 				if(indexOfNgram != -1){
 					NGram ngram =ngramList.get(indexOfNgram);
@@ -122,12 +128,25 @@ public class HelperLucene {
 				}
 				else{
 					ngramList.add(newNGram);
-					final int df_corpus = reader.docFreq(new Term(field, term));
+					//THIS THE PER	FORMANCE BOTTLENECK
+					final int df_corpus = reader.docFreq(new Term(field, term));					
+//					System.out.println("df:"+df_corpus+"\tNewDF:"+total_ff_query);
 					newNGram.setDf_query(1);
 					newNGram.setDf_corpus(df_corpus);
 					newNGram.setTotal_tf_query(total_tf_query);
 				}
 			}
 		}
+	}
+	
+	private static String getNgramType(String ngram){
+		int type = ngram.split(" ").length;
+		if(type==1)
+			return "UNI";
+		else if(type==2)
+			return "BI";
+		else if(type==3)
+			return "TRI";
+		return null;
 	}
 }

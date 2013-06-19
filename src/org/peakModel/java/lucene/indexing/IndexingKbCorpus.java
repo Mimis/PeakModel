@@ -54,18 +54,20 @@ public class IndexingKbCorpus {
 		IndexingKbCorpus indexingKbCorpus = new IndexingKbCorpus(indexKbCorpusFileName, dutchStopWordFile,setRAMBufferSizeMB,createNewIndex);
 		
 		
+
+		
 		/*
 		 * add TEST documents
 		 */
-		String date = "1987-12-12";
-		String url = "http://kranten.kb.nl/view/article/id/ddd:011022115:mpeg21:p001:a0005";
-		String title = " ROTTERDAM  second 1,5 1.66 aa ROTTERDAM Miljarden zwart-? geld &*_#in gokkast aan  1233422  4545malaka";
-		String content = "ROTTERDAM — \"Per jaar verdwijnt er\" in ons land volgens";
-		indexingKbCorpus.addDoc( date, url, title, content);
+//		String date = "1987-12-12";
+//		String url = "http://kranten.kb.nl/view/article/id/ddd:011022115:mpeg21:p001:a0005";
+//		String title = " ROTTERDAM  second 1,5 1.66 aa ROTTERDAM Miljarden zwart-? geld &*_#in gokkast aan  1233422  4545malaka";
+//		String content = "ROTTERDAM — \"Per jaar verdwijnt er\" in ons land volgens";
+//		indexingKbCorpus.addDoc( date, url, title, content);
 		
 		
 		//close index
-		indexingKbCorpus.closeIndexWriter();
+		indexingKbCorpus.closeIndexWriter(true);
 		
 		//timer
         long endTime = System.currentTimeMillis();
@@ -76,10 +78,13 @@ public class IndexingKbCorpus {
 	
 	
 	
+	public void commit() throws IOException{
+		this.getIndexWriter().commit();
+	}
 	
 	
-	public void closeIndexWriter() throws IOException{
-		HelperLucene.closeIndexWriter(this.getIndexWriter());
+	public void closeIndexWriter(boolean executeIndexMerge) throws IOException{
+		HelperLucene.closeIndexWriter(this.getIndexWriter(),executeIndexMerge);
 	}
 	
 	public IndexWriter getKbIndexWriter(double setRAMBufferSizeMB, boolean createNewIndex) throws IOException{
