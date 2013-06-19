@@ -10,8 +10,8 @@ import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
+import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
 import org.apache.lucene.queryparser.classic.ParseException;
-import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
@@ -37,10 +37,29 @@ public class SearchLuceneIndex {
 		 * Input Parameters
 		 */
 		//==========================================================//
-		String indexKbCorpusFileName = "./index/KbCorpus";
-		String dutchStopWordFile = "./data/stopWords/dutch.txt";
-		String experimentsFile = "./experiments/testQueryTF.csv";
+		String indexKbCorpusFileName = "../index/KBcorpus";
+		String dutchStopWordFile = "../data/stopWords/dutch.txt";
 		int topBestTerms = 100;
+		int MAX_DOCS = 1000;
+		
+		/*
+		 * Queries
+		 */
+        String query = "\""+ args[0] + "\"";
+		String date = args[1];//"date:[1976-01-01 TO 1976-12-30]";
+		//This queries shoudl use to find out how many docs got content for each field separate in a specific period
+//		String titleDate = "title:{* TO *} AND " + date;
+//		String contentDate = "content:{* TO *} AND " + date;
+		if(!date.equals("null"))
+			query = query + " AND " + date;
+		//get Ngram Statistics
+		boolean getNgramStats = Boolean.parseBoolean(args[2]);
+		String ngram_type = args[3];//uni,bi,mix
+		
+		//experiment output files
+		String experimentsFileTF = "../experiments/"+query+"TF.csv";
+		String experimentsFilePMIclassic = "../experiments/"+query+"PMIclassic.csv";
+		String experimentsFilePMIpeak = "../experiments/"+query+"PMIpeak.csv";
 		//==========================================================//
 		
         
@@ -48,6 +67,7 @@ public class SearchLuceneIndex {
 		 * Variables
 		 */
 		//==========================================================//
+		int totalNumberOfDocuments = -1;
         int totalNumberOfDocumentsWithTitle = -1;
         int totalNumberOfDocumentsWithContent = -1;
 		int totalNumberOfRelevantDocuments = -1;
@@ -55,16 +75,6 @@ public class SearchLuceneIndex {
 //		int totalNumberOfDocumentsWithTitleInGivenPeriod = -1;
 //		int totalNumberOfDocumentsWithContentInGivenPeriod = -1;
 		List<NGram> ngramList = new ArrayList<NGram>();
-		
-		/*
-		 * Queries
-		 */
-        String query = "\""+ "griek" + "\"";
-		String date = "date:[1980-05-05 TO 1980-05-05]";
-		//This queries shoudl use to find out how many docs got content for each field separate in a specific period
-//		String titleDate = "title:{* TO *} AND " + date;
-//		String contentDate = "content:{* TO *} AND " + date;
-        String wholeQuery = query + " AND " + date;
 		//==========================================================//
         
         
@@ -75,10 +85,14 @@ public class SearchLuceneIndex {
         DirectoryReader reader = DirectoryReader.open(indexDir);
         IndexSearcher searcher = new IndexSearcher(reader);
         Analyzer analyzer = HelperLucene.getKbAnalyzer(dutchStopWordFile);
-        QueryParser queryParser = new QueryParser(Version.LUCENE_43, "title", analyzer);
         TotalHitCountCollector collectorOnlyForHitCount = new TotalHitCountCollector();
         
         
+        /*
+         * QueryParser
+         */
+//        QueryParser queryParser = new QueryParser(Version.LUCENE_43, "title", analyzer);
+        MultiFieldQueryParser queryParser = new MultiFieldQueryParser(Version.LUCENE_43, new String[] {"content", "title"},analyzer);
         
         
         
@@ -89,9 +103,9 @@ public class SearchLuceneIndex {
          * Get total number of document with title  or content text in the whole index
          * 	**THESE ARE CONTSTANTS!!!!**
          */
-        totalNumberOfDocumentsWithTitle = reader.getDocCount("title");
-        totalNumberOfDocumentsWithContent = reader.getDocCount("content");
-        
+        totalNumberOfDocumentsWithTitle = 19376917;//reader.getDocCount("title");
+        totalNumberOfDocumentsWithContent = 19102728;//reader.getDocCount("content");
+        totalNumberOfDocuments = 19442493;//reader.numDocs();
 		        
         
         /*
@@ -105,33 +119,43 @@ public class SearchLuceneIndex {
         /*
          * 2.1 Whole Query  Search: Get relevant docs to the given query, the total number of relevant docs and the terms with their info that exist in  
          */
-		TopDocs topDocs = HelperLucene.queryIndexGetTopDocs(queryParser,searcher, wholeQuery,1000000000);
+		TopDocs topDocs = HelperLucene.queryIndexGetTopDocs(queryParser,searcher, query,MAX_DOCS);
+		ScoreDoc[] hits = topDocs.scoreDocs;
+		totalNumberOfRelevantDocuments = hits.length;
 
 		
         /*
          * 2.2 Get the N-Grams with their Document Frequency and Total Frequency in each field!
          */
-        if(totalNumberOfRelevantDocuments==0){
-        	System.out.println("Zero Results :/");
-        }else{
-        	TermsEnum termsEnum = null;
-			ScoreDoc[] hits = topDocs.scoreDocs;
-			totalNumberOfRelevantDocuments = hits.length;
-			for (int i = 0; i < hits.length; ++i) {
-				int docId = hits[i].doc;
-				final Document doc = searcher.doc(docId);
-				System.out.println("Doc id:" + docId + "\tTitle:"+ doc.get("title") + " Date:" + doc.get("date")	+ "\tUrl:" + doc.get("url"));
-				
-				final Terms titleTermVector = reader.getTermVector(docId,"title");
-				HelperLucene.mapTermVectorToNGramList(reader, titleTermVector, termsEnum, "title", ngramList);
-//				 final Terms contentTermVector = reader.getTermVector(docId,"content");
-//				 HelperLucene.displayTermVector(reader,contentTermVector, termsEnum,"content");
-			}
-        }
-        
+        System.out.println("HITS:"+totalNumberOfRelevantDocuments);
+        int countProcessDocs = 0;
+		if(getNgramStats){
+	        if(totalNumberOfRelevantDocuments==0){
+	        	System.out.println("Zero Results :/");
+	        }else{
+	        	TermsEnum termsEnum = null;
+				for (int i = 0; i < hits.length; ++i) {
+					int docId = hits[i].doc;
+					final Document doc = searcher.doc(docId);
+					System.out.println(countProcessDocs++ +"\tDoc id:" + docId + "\tTitle:"+ doc.get("title") + " Date:" + doc.get("date")	+ "\tUrl:" + doc.get("url"));
+					
+					final Terms titleTermVector = reader.getTermVector(docId,"title");
+
+					//TODO keep only unigram or bigrams or all of them based on the input
+					HelperLucene.mapTermVectorToNGramList(reader, titleTermVector, termsEnum, "title", ngramList,ngram_type);
+				    
+	//				 final Terms contentTermVector = reader.getTermVector(docId,"content");
+	//				 HelperLucene.displayTermVector(reader,contentTermVector, termsEnum,"content");
+					System.out.println("Unique Ngrams:"+ngramList.size());
+				}
+	        }
+		}
+		
+		
         /*
          * 3. Calculate Statistical Measures
          */
+		System.out.println("Calculate Statistical Measures for NGrams....");
         for(NGram ngram:ngramList){
         	//Title
         	ngram.setDf_time(HelperLucene.getNgramDf(ngram.getNgram(), date, "title", queryParser, searcher));
@@ -139,6 +163,9 @@ public class SearchLuceneIndex {
         	ngram.computePMIClasic();
         	ngram.computePMItime();
         }
+        
+        
+        
 
         /*
          * 4. Sort NGrams By:
@@ -146,23 +173,40 @@ public class SearchLuceneIndex {
          *  b.PMI_classic
          *  c.PMI_time
          */
-        Collections.sort(ngramList, NGram.COMPARATOR_TOTAL_TF);
-//        Collections.sort(ngramList, NGram.COMPARATOR_PMI_CLASSIC);
-//        Collections.sort(ngramList, NGram.COMPARATOR_PMI_TIME);
+        if(getNgramStats){
+	       	Collections.sort(ngramList, NGram.COMPARATOR_TOTAL_TF);
+	       	writeNgramToCsv(ngramList, experimentsFileTF, topBestTerms);
+	       	Collections.sort(ngramList, NGram.COMPARATOR_PMI_CLASSIC);
+	       	writeNgramToCsv(ngramList, experimentsFilePMIclassic, topBestTerms);
+	       	Collections.sort(ngramList, NGram.COMPARATOR_PMI_TIME);
+	       	writeNgramToCsv(ngramList, experimentsFilePMIpeak, topBestTerms);
+        }        
+       	
         
-        
-        
+       	
+       	
         
         /*
          * 5. Display results
          */
         System.out.println("====================================================================================================");
-        System.out.println("Query:"+wholeQuery);
+        System.out.println("Query:"+query);
         System.out.println("====================================================================================================");
         System.out.println("TotalNumberOfRelevantDocuments:"+totalNumberOfRelevantDocuments);
-        System.out.println("TotalNumberOfDocumentsInGivenPeriod:"+totalNumberOfDocumentsInGivenPeriod+"\tTotalNumberOfDocumentWithTitle:"+totalNumberOfDocumentsWithTitle + "\tTotalNumberOfDocumentWithContent:"+totalNumberOfDocumentsWithContent);
+        System.out.println("TotalNumberOfDocumentsInGivenPeriod:"+totalNumberOfDocumentsInGivenPeriod+"\tTotalNumberOfDocumentWithTitle:"+totalNumberOfDocumentsWithTitle + "\tTotalNumberOfDocumentWithContent:"+totalNumberOfDocumentsWithContent+"\tTotalDocs:"+totalNumberOfDocuments);
         System.out.println("====================================================================================================");
-        String csvExpnationOutput = "ngram ,total_tf_query,P_w,P_w_Given_query_time,P_w_Given_time,PMI_classic,PMI_time";
+        
+        
+        
+        
+        //timer
+        long endTime = System.currentTimeMillis();
+	    System.out.println("#Total Indexing run time:"+ (endTime-startTime)/1000);
+	}
+	
+	
+	public static void writeNgramToCsv(List<NGram> ngramList, String experimentsFile, int topBestTerms) throws IOException{
+		String csvExpnationOutput = "ngram ,total_tf_query,P_w,P_w_Given_query_time,P_w_Given_time,PMI_classic,PMI_time";
     	System.out.println(csvExpnationOutput);
         Helper.writeLineToFile(experimentsFile,csvExpnationOutput, false,true);
     	int countTerms = 1;
@@ -172,9 +216,5 @@ public class SearchLuceneIndex {
         	if(countTerms++ >= topBestTerms)
         		break;
         }
-        System.out.println("====================================================================================================");
-        //timer
-        long endTime = System.currentTimeMillis();
-	    System.out.println("#Total Indexing run time:"+ (endTime-startTime)/1000);
 	}
 }
