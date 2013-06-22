@@ -2,9 +2,13 @@ package org.peakModel.java.utils;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.StringReader;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.util.CharArraySet;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
@@ -26,9 +30,27 @@ import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.Version;
 import org.peakModel.java.lucene.analyzer.KbAnalyzer;
-import org.peakModel.java.ngram.NGram;
+import org.peakModel.java.lucene.analyzer.NGramAnalyzer;
+import org.peakModel.java.ngram.NGramWithDF;
 
 public class HelperLucene {
+	
+	public static List<String> tokenizeString(Analyzer analyzer, String textToTokenize)	throws IOException {
+		List<String> ngrams = new ArrayList<String>();
+		TokenStream ts = analyzer.tokenStream("title", new StringReader(textToTokenize));
+
+		try {
+			ts.reset(); // Resets this stream to the beginning. (Required)
+			while (ts.incrementToken()) {
+				ngrams.add(ts.getAttribute(CharTermAttribute.class).toString());
+			}
+			ts.end(); // Perform end-of-stream operations, e.g. set the final
+						// offset.
+		} finally {
+			ts.close(); // Release resources associated with this stream.
+		}
+		return ngrams;
+	}	
 	
 	/**
 	 * 
@@ -79,6 +101,11 @@ public class HelperLucene {
     	return analyzer;
 	}
 
+    public static Analyzer getNGramAnalyzer(String dutchStopWordFile,int minN,int maxN) throws IOException{
+    	CharArraySet stopWordsSet = Helper.getStopWordsSet(dutchStopWordFile);
+        NGramAnalyzer analyzer = new NGramAnalyzer(Version.LUCENE_43, stopWordsSet,minN, maxN);
+    	return analyzer;
+	}
 	
 	
 	public static Directory getIndexDir(String indexKbCorpusFileName) throws IOException{
@@ -105,7 +132,7 @@ public class HelperLucene {
 		}
 	}
 
-	public static void mapTermVectorToNGramList(DirectoryReader reader,Terms terms,TermsEnum termsEnum,String field,List<NGram> ngramList,String ngram_type) throws IOException{
+	public static void mapTermVectorToNGramList(DirectoryReader reader,Terms terms,TermsEnum termsEnum,String field,List<NGramWithDF> ngramList,String ngram_type) throws IOException{
 		if (terms != null) {
 			termsEnum = terms.iterator(termsEnum);
 			BytesRef text;
@@ -116,13 +143,13 @@ public class HelperLucene {
 				if(!ngram_type.equals(currentNgram_type) && !ngram_type.equals("MIX"))
 					continue;
 				
-				NGram newNGram = new NGram(term,field);
+				NGramWithDF newNGram = new NGramWithDF(term,field);
 				//this we need it anyway to retrieve it in both cases
 				final int total_tf_query = (int) termsEnum.totalTermFreq();			
 				
 				int indexOfNgram = ngramList.indexOf(newNGram);
 				if(indexOfNgram != -1){
-					NGram ngram =ngramList.get(indexOfNgram);
+					NGramWithDF ngram =ngramList.get(indexOfNgram);
 					ngram.addTotal_tf_query(total_tf_query);
 					ngram.increaseByOneDf_query();
 				}

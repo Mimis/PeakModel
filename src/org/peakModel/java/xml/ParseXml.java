@@ -22,9 +22,7 @@ public class ParseXml {
 	public static void main(String[] args) {
 		long startTime = System.currentTimeMillis();
 
-		String kbDataFolderForIndexing = "/Users/mimis/Data/KB_data/1985_1989";
-
-		
+		String kbDataFolderForIndexing = "/Users/mimis/Development/EclipseProject/PeakModel/data/KB/" + args[0];
 		try {
 
 			SAXParserFactory factory = SAXParserFactory.newInstance();
@@ -37,14 +35,14 @@ public class ParseXml {
 				/**
 				 * Lucene...
 				 */
-				String indexKbCorpusFileName = "../index/KB_1985";
-				String dutchStopWordFile = "../data/stopWords/dutch.txt";
+				String indexKbCorpusFileName = "/Users/mimis/Development/EclipseProject/PeakModel/index/KB_1990";
+				String dutchStopWordFile = "/Users/mimis/Development/EclipseProject/PeakModel/data/stopWords/dutch.txt";
 				double setRAMBufferSizeMB = 1024;
 				boolean createNewIndex = false;
-				//upadte index;dont create from scratch
+				//updAte index;dont create from scratch
 				IndexingKbCorpus indexingKbCorpus;
 				//dont merge the index in every close command
-				boolean executeIndexMerge = false;
+				boolean executeIndexMerge = true;
 				
 				boolean date = false;
 				String DateValue = null;
@@ -126,7 +124,7 @@ public class ParseXml {
 							
 							//add doc in the lucene index
 							indexingKbCorpus.addDoc(DateValue, sourceValue,	titleValue, paragraphValue.toString());
-							if(docCounter++ % 10000 == 0)
+							if(docCounter++ % 100000 == 0)
 								System.out.println("docCounter : " + docCounter);
 								
 						}

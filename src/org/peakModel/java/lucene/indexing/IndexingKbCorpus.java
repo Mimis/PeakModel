@@ -47,14 +47,14 @@ public class IndexingKbCorpus {
 	public static void main(String[] args) throws IOException {
 		long startTime = System.currentTimeMillis();
 
-		String indexKbCorpusFileName = "./index/test";
+		String indexKbCorpusFileName = "/Users/mimis/Development/EclipseProject/PeakModel/index/test";
 		String dutchStopWordFile = "./data/stopWords/dutch.txt";
 		double setRAMBufferSizeMB = 1024;
 		boolean createNewIndex = false;
 		IndexingKbCorpus indexingKbCorpus = new IndexingKbCorpus(indexKbCorpusFileName, dutchStopWordFile,setRAMBufferSizeMB,createNewIndex);
-		
-		
 
+		
+		
 		
 		/*
 		 * add TEST documents
@@ -74,13 +74,6 @@ public class IndexingKbCorpus {
 	    System.out.println("#Total Indexing run time:"+ (endTime-startTime)/1000);
 	}
 	
-	
-	
-	
-	
-	public void commit() throws IOException{
-		this.getIndexWriter().commit();
-	}
 	
 	
 	public void closeIndexWriter(boolean executeIndexMerge) throws IOException{
@@ -141,10 +134,8 @@ public class IndexingKbCorpus {
 		contentOptions.setIndexed(true);
 		//Indexes documents, frequencies and positions. This is a typical default for full-text search: full scoring is enabled and positional queries are supported.
 		contentOptions.setIndexOptions(IndexOptions.DOCS_AND_FREQS_AND_POSITIONS);
-		contentOptions.setStored(false);
-		contentOptions.setStoreTermVectors(true);
+		contentOptions.setStored(true);
 		contentOptions.setTokenized(true);
-		contentOptions.freeze();
 		return contentOptions;
 	}
 
@@ -158,9 +149,7 @@ public class IndexingKbCorpus {
 		//Indexes documents, frequencies and positions. This is a typical default for full-text search: full scoring is enabled and positional queries are supported.
 		contentOptions.setIndexOptions(IndexOptions.DOCS_AND_FREQS_AND_POSITIONS);
 		contentOptions.setStored(true);
-		contentOptions.setStoreTermVectors(true);
 		contentOptions.setTokenized(true);
-		contentOptions.freeze();
 		return contentOptions;
 	}
 
@@ -182,69 +171,11 @@ public class IndexingKbCorpus {
 
 
 	/**
-	 * @return the dutchStopWordFile
-	 */
-	public String getDutchStopWordFile() {
-		return dutchStopWordFile;
-	}
-
-
-	/**
-	 * @param dutchStopWordFile the dutchStopWordFile to set
-	 */
-	public void setDutchStopWordFile(String dutchStopWordFile) {
-		this.dutchStopWordFile = dutchStopWordFile;
-	}
-
-
-	/**
-	 * @return the titleFieldType
-	 */
-	public FieldType getTitleFieldType() {
-		return titleFieldType;
-	}
-
-
-	/**
-	 * @param titleFieldType the titleFieldType to set
-	 */
-	public void setTitleFieldType(FieldType titleFieldType) {
-		this.titleFieldType = titleFieldType;
-	}
-
-
-	/**
-	 * @return the contentFieldType
-	 */
-	public FieldType getContentFieldType() {
-		return contentFieldType;
-	}
-
-
-	/**
-	 * @param contentFieldType the contentFieldType to set
-	 */
-	public void setContentFieldType(FieldType contentFieldType) {
-		this.contentFieldType = contentFieldType;
-	}
-
-
-	/**
 	 * @return the indexWriter
 	 */
 	public IndexWriter getIndexWriter() {
 		return indexWriter;
 	}
 
-
-	/**
-	 * @param indexWriter the indexWriter to set
-	 */
-	public void setIndexWriter(IndexWriter indexWriter) {
-		this.indexWriter = indexWriter;
-	}
-
-	
-	
 	
 }

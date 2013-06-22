@@ -8,15 +8,55 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import org.apache.lucene.analysis.util.CharArraySet;
 import org.apache.lucene.util.Version;
+import org.peakModel.java.ngram.NGram;
 
 public class Helper {
 
+	
+	public static void getPeakPeriodIndex(String fileWithTFperYear,HashMap<String,Integer> peakPeriodMap){
+		File file = new File(fileWithTFperYear);
+		try {
+			BufferedReader input = new BufferedReader(new FileReader(file));
+			try {
+				String line = null;
+				while ((line = input.readLine()) != null) {
+					if (!line.isEmpty()){
+						String[] tfPerYear = line.split(",");
+						peakPeriodMap.put(tfPerYear[0],Integer.parseInt(tfPerYear[1]));
+					}
+				}
+			} finally {
+				input.close();
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}	
+
+	}
+	
+	public static void mapTokenListToNGramList(List<String> tokenList,String field,List<NGram> ngramList) throws IOException{
+		for(String token:tokenList){
+			NGram newNGram = new NGram(token,field);
+			int indexOfNgram = ngramList.indexOf(newNGram);
+			if(indexOfNgram != -1){
+				NGram ngram =ngramList.get(indexOfNgram);
+				ngram.increaseTFpeakByone();
+			}
+			else{
+				ngramList.add(newNGram);
+				newNGram.setTf_query_peak(1);
+			}
+		}
+	}
+
+	
 	public static CharArraySet getStopWordsSet(String stopWordFile){
 		Set<String> stopWordsList = readFileLineByLineReturnSetOfLineString(stopWordFile);
 		CharArraySet stopWordsSet = new CharArraySet(Version.LUCENE_43, stopWordsList, false);

@@ -6,21 +6,25 @@ import org.peakModel.java.utils.Helper;
 
 
 public class NGram {
+	/* (non-Javadoc)
+	 * @see java.lang.Object#toString()
+	 */
+	
+
 	//variables
 	private String ngram;
-	private int total_tf_query;
-	private int df_query;
-	private int df_corpus;
-	private int df_time;
+	private int tf_query_peak;
+	private int tf_peak;
+	private int tf_corpus;
 	private String field;
 	//probabilities
 	private double P_w;
-	private double P_w_Given_query;
+	private double P_w_Given_query_peak;
 	private double P_w_Given_time; 
 	//statistical measures
 	private double PMI_classic;
-	private double PMI_time;
-	
+	private double PMI_peak;
+	private double PMI_peak_times_tf_query_peak;
 	/**
 	 * @param ngram
 	 * @param field
@@ -31,105 +35,148 @@ public class NGram {
 		this.field = field;
 	}
 	
-	public void addTotal_tf_query(int total_tf_query){
-		this.total_tf_query += total_tf_query;
+	public void increaseTFpeakByone() {
+		this.tf_query_peak += 1;
 	}
+
+	
 	
 	
 	/**
-	 * @return the pMI_time
+	 * @return the pMI_peak_times_tf_query_peak
 	 */
-	public double getPMI_time() {
-		return PMI_time;
+	public double getPMI_peak_times_tf_query_peak() {
+		return PMI_peak_times_tf_query_peak;
 	}
 
 	/**
-	 * @param pMI_time the pMI_time to set
+	 * @param pMI_peak_times_tf_query_peak the pMI_peak_times_tf_query_peak to set
 	 */
-	public void setPMI_time(double pMI_time) {
-		PMI_time = pMI_time;
+	public void setPMI_peak_times_tf_query_peak(double pMI_peak_times_tf_query_peak) {
+		PMI_peak_times_tf_query_peak = pMI_peak_times_tf_query_peak;
 	}
 
+	/**
+	 * @return the p_w_Given_query_peak
+	 */
+	public double getP_w_Given_query_peak() {
+		return P_w_Given_query_peak;
+	}
+
+	/**
+	 * @param p_w_Given_query_peak the p_w_Given_query_peak to set
+	 */
+	public void setP_w_Given_query_peak(double p_w_Given_query_peak) {
+		P_w_Given_query_peak = p_w_Given_query_peak;
+	}
+
+	/**
+	 * @return the pMI_peak
+	 */
+	public double getPMI_peak() {
+		return PMI_peak;
+	}
+
+	/**
+	 * @param pMI_peak the pMI_peak to set
+	 */
+	public void setPMI_peak(double pMI_peak) {
+		PMI_peak = pMI_peak;
+	}
+
+	/**
+	 * @return the tf_peak
+	 */
+	public int getTf_peak() {
+		return tf_peak;
+	}
+
+	/**
+	 * @param tf_peak the tf_peak to set
+	 */
+	public void setTf_peak(int tf_peak) {
+		this.tf_peak = tf_peak;
+	}
+
+	/**
+	 * @return the tf_corpus
+	 */
+	public int getTf_corpus() {
+		return tf_corpus;
+	}
+
+	/**
+	 * @param tf_corpus the tf_corpus to set
+	 */
+	public void setTf_corpus(int tf_corpus) {
+		this.tf_corpus = tf_corpus;
+	}
+
+	/**
+	 * @return the tf_query_peak
+	 */
+	public int getTf_query_peak() {
+		return tf_query_peak;
+	}
+
+	/**
+	 * @param tf_query_peak the tf_query_peak to set
+	 */
+	public void setTf_query_peak(int tf_query_peak) {
+		this.tf_query_peak = tf_query_peak;
+	}
+
+	
 	/**
 	 * @return the p_w
 	 */
 	public double getP_w() {
-		return P_w;
+		return this.P_w;
 	}
 
 	/**
 	 * @param p_w the p_w to set
 	 */
 	public void setP_w(double p_w) {
-		P_w = p_w;
+		this.P_w = p_w;
 	}
 
-	/**
-	 * @return the p_w_Given_query
-	 */
-	public double getP_w_Given_query() {
-		return P_w_Given_query;
-	}
-
-	/**
-	 * @param p_w_Given_query the p_w_Given_query to set
-	 */
-	public void setP_w_Given_query(double p_w_Given_query) {
-		P_w_Given_query = p_w_Given_query;
-	}
-
+	
 	/**
 	 * @return the p_w_Given_time
 	 */
 	public double getP_w_Given_time() {
-		return P_w_Given_time;
+		return this.P_w_Given_time;
 	}
 
 	/**
 	 * @param p_w_Given_time the p_w_Given_time to set
 	 */
 	public void setP_w_Given_time(double p_w_Given_time) {
-		P_w_Given_time = p_w_Given_time;
+		this.P_w_Given_time = p_w_Given_time;
 	}
 
-	/**
-	 * @return the df_query
-	 */
-	public int getDf_query() {
-		return df_query;
-	}
-
-	/**
-	 * @param df_query the df_query to set
-	 */
-	public void setDf_query(int df_query) {
-		this.df_query = df_query;
-	}
-
-	public void increaseByOneDf_query() {
-		this.df_query += 1;
-	}
 
 	
 	/**
 	 * @return the pMI_classic
 	 */
 	public double getPMI_classic() {
-		return PMI_classic;
+		return this.PMI_classic;
 	}
 
 	/**
 	 * @param pMI_classic the pMI_classic to set
 	 */
 	public void setPMI_classic(double pMI_classic) {
-		PMI_classic = pMI_classic;
+		this.PMI_classic = pMI_classic;
 	}
 
 	/**
 	 * @return the ngram
 	 */
 	public String getNgram() {
-		return ngram;
+		return this.ngram;
 	}
 	/**
 	 * @param ngram the ngram to set
@@ -139,46 +186,10 @@ public class NGram {
 	}
 	
 	/**
-	 * @return the total_tf_query
-	 */
-	public int getTotal_tf_query() {
-		return total_tf_query;
-	}
-	/**
-	 * @param total_tf_query the total_tf_query to set
-	 */
-	public void setTotal_tf_query(int total_tf_query) {
-		this.total_tf_query = total_tf_query;
-	}
-	/**
-	 * @return the df_corpus
-	 */
-	public int getDf_corpus() {
-		return df_corpus;
-	}
-	/**
-	 * @param df_corpus the df_corpus to set
-	 */
-	public void setDf_corpus(int df_corpus) {
-		this.df_corpus = df_corpus;
-	}
-	/**
-	 * @return the df_time
-	 */
-	public int getDf_time() {
-		return df_time;
-	}
-	/**
-	 * @param df_time the df_time to set
-	 */
-	public void setDf_time(int df_time) {
-		this.df_time = df_time;
-	}
-	/**
 	 * @return the field
 	 */
 	public String getField() {
-		return field;
+		return this.field;
 	}
 	/**
 	 * @param field the field to set
@@ -187,34 +198,53 @@ public class NGram {
 		this.field = field;
 	}
 	
-	//P(w) = df_w_corpus / |D|corpus
-	//P(w|query) = df_w_query / |D|query
+	
+	
+	//P(w) = tf_w_corpus / N_corpus
+	//P(w|query,peak) = tf_w_query_peak / |D|query
 	//P(w|time_peak) = df_w_time_peak / |D|time_peak
-	public void calculateProbabilities(int totalNumberOfDocuments, int totalNumberOfRelevantDocuments,int totalNumberOfDocumentsInGivenPeriod){
-		this.P_w = (double) this.df_corpus / totalNumberOfDocuments;
-		this.P_w_Given_query = (double) this.df_query / totalNumberOfRelevantDocuments;
-		this.P_w_Given_time = (double) this.df_time / totalNumberOfDocumentsInGivenPeriod;
+	public void calculateProbabilities(int N_corpus, int N_query_peakPeriod,int N_peak){
+		this.P_w = (double) this.tf_corpus / N_corpus;
+		this.P_w_Given_time = (double) this.tf_peak / N_peak;
+		this.P_w_Given_query_peak = (double) this.tf_query_peak / N_query_peakPeriod;
 	}
 	
 	
 	/**
 	 * Calculate classic PMI as below:
-	 * 	PMI(w|query) = log P(w|query) - log P(w)
+	 * 	PMI(w|query,peak) = log P(w|query,peak) - log P(w)
 	 */
 	public void computePMIClasic() {
-		this.PMI_classic = Helper.log2(this.P_w_Given_query) - Helper.log2(this.P_w);
+		this.PMI_classic = Helper.log2(this.P_w_Given_query_peak) - Helper.log2(this.P_w);
 	}
 	
 	/**
 	 * Calculate PMI on Peak period as below:
-	 * 	PMI(w|query) = log P(w|query) - log P(w|time_peak)
+	 * 	PMI(w|query,peak) = log P(w|query,peak) - log P(w|time_peak)
 	 */
-	public void computePMItime() {
-		this.PMI_time = Helper.log2(this.P_w_Given_query) - Helper.log2(this.P_w_Given_time);
+	public void computePMIpeak() {
+		this.PMI_peak = Helper.log2(this.P_w_Given_query_peak) - Helper.log2(this.P_w_Given_time);
+	}
+	
+	/**
+	 * Calculate PMI on Peak period multiply by tf_query_peak:
+	 * 	PMI(w|query,peak) = (log P(w|query,peak) - log P(w|time_peak)) * log(tf_query_peak)
+	 */
+	public void computePMIpeakTimesTf_query_peak() {
+		this.PMI_peak_times_tf_query_peak = (Helper.log2(this.P_w_Given_query_peak) - Helper.log2(this.P_w_Given_time)) * this.tf_query_peak;
 	}
 	
 	
-	
+
+	/* (non-Javadoc)
+	 * @see java.lang.Object#toString()
+	 */
+	@Override
+	public String toString() {
+		return "NGram [ngram=" + ngram + ", tf_query_peak=" + tf_query_peak
+				+ ", tf_peak=" + tf_peak + ", tf_corpus=" + tf_corpus
+				+ ", field=" + field + "]";
+	}
 
 	/* (non-Javadoc)
 	 * @see java.lang.Object#hashCode()
@@ -228,26 +258,6 @@ public class NGram {
 		return result;
 	}
 
-	/* (non-Javadoc)
-	 * @see java.lang.Object#toString()
-	 */
-	@Override
-	public String toString() {
-		return "NGram [ngram=" + ngram + ", total_tf_query=" + total_tf_query
-				+ ", df_query=" + df_query + ", df_corpus=" + df_corpus
-				+ ", df_time=" + df_time + ", field=" + field + ", P_w=" + P_w
-				+ ", P_w_Given_query=" + P_w_Given_query + ", P_w_Given_time="
-				+ P_w_Given_time + ", PMI_classic=" + PMI_classic
-				+ ", PMI_time=" + PMI_time + "]";
-	}
-
-	/**
-	 * Now for each experiment, create a csv file with the top 100 terms, their TF , their log P(W|query, time_peak), 
-	 * their log prior probability, their log prior probability in the peak period, and their PMI. Order them by TF and then PMI. 
-	 */
-	public String toStringCsvCompact() {
-		return  ngram + "," + total_tf_query + "," + P_w + "," + P_w_Given_query + "," + P_w_Given_time + "," + PMI_classic + "," + PMI_time;	
-	}
 	
 	/* (non-Javadoc)
 	 * @see java.lang.Object#equals(java.lang.Object)
@@ -281,12 +291,21 @@ public class NGram {
 	public static Comparator<NGram> COMPARATOR_TOTAL_TF = new Comparator<NGram>()
     {
         public int compare(NGram o1, NGram o2){
-            return o2.total_tf_query - o1.total_tf_query;
+            return o2.tf_query_peak - o1.tf_query_peak;
         }
     };
 
+    /**
+	 * Sort by PMI_peak_times_tf_query_peak
+	 */
+	public static Comparator<NGram> COMPARATOR_PMI_PEAK_TIMES_TF_Query_Peak = new Comparator<NGram>()
+    {
+        public int compare(NGram o1, NGram o2){
+            return o2.tf_query_peak - o1.tf_query_peak;
+        }
+    };
 	/**
-	 * Sort by Total Term Frequency in the result documents
+	 * Sort by PMI classic
 	 */
 	public static Comparator<NGram> COMPARATOR_PMI_CLASSIC = new Comparator<NGram>()
     {
@@ -301,14 +320,14 @@ public class NGram {
     };
     
     /**
-	 * Sort by Total Term Frequency in the result documents
+	 * Sort by PMI_peak_
 	 */
-	public static Comparator<NGram> COMPARATOR_PMI_TIME = new Comparator<NGram>()
+	public static Comparator<NGram> COMPARATOR_PMI_PEAK = new Comparator<NGram>()
     {
         public int compare(NGram o1, NGram o2){
-            if(o2.PMI_time > o1.PMI_time )
+            if(o2.PMI_peak > o1.PMI_peak )
             	return 1;
-            else if(o2.PMI_time < o1.PMI_time )
+            else if(o2.PMI_peak < o1.PMI_peak )
             	return 0;
             else 
             	return 0;

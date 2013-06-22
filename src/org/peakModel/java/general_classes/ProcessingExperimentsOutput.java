@@ -10,7 +10,7 @@ public class ProcessingExperimentsOutput {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		String experimentsFolder = "/Users/mimis/Development/EclipseProject/PeakModel/experiments";
+		String experimentsFolder = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/baseline_setup_+_search_only_titles_4_docs";
 		String experimentFile = "beatrix_[1965-01-01 TO 1965-12-31]_PMIclassic.csv";
 		int returnTopN = 10;
 		
@@ -20,7 +20,7 @@ public class ProcessingExperimentsOutput {
 			String[] statsArray = ngramStatsCsv.split(",");
 //			System.out.println(statsArray[0]+"\t"+statsArray[1]);
 			System.out.println(statsArray[0]+"\t"+statsArray[5]+"\t"+statsArray[1]);
-			System.out.println(statsArray[0]+"\t"+statsArray[6]+"\t"+statsArray[1]);
+//			System.out.println(statsArray[0]+"\t"+statsArray[6]+"\t"+statsArray[1]);
 
 			if(countNgrams++ >= returnTopN)
 				break;

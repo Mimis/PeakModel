@@ -3,19 +3,18 @@ package org.peakModel.java.lucene.searching;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
-import org.apache.lucene.index.Terms;
-import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
 import org.apache.lucene.queryparser.classic.ParseException;
+import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
-import org.apache.lucene.search.TotalHitCountCollector;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.Version;
 import org.peakModel.java.ngram.NGram;
@@ -33,159 +32,186 @@ public class SearchLuceneIndex {
 		long startTime = System.currentTimeMillis();
 		
 		
-		/*
-		 * Input Parameters
-		 */
-		//==========================================================//
-		String indexKbCorpusFileName = "../index/KBcorpus";
-		String dutchStopWordFile = "../data/stopWords/dutch.txt";
-		int topBestTerms = 100;
-		int MAX_DOCS = 1000;
-		
-		/*
-		 * Queries
-		 */
-        String query = "\""+ args[0] + "\"";
-		String date = args[1];//"date:[1976-01-01 TO 1976-12-30]";
-		//This queries shoudl use to find out how many docs got content for each field separate in a specific period
-//		String titleDate = "title:{* TO *} AND " + date;
-//		String contentDate = "content:{* TO *} AND " + date;
+		//========================================================== Input Parameters ==========================================================//
+		String query = "\""+ args[0] + "\"";
+		String date = args[1];//year
 		if(!date.equals("null"))
-			query = query + " AND " + date;
-		//get Ngram Statistics
-		boolean getNgramStats = Boolean.parseBoolean(args[2]);
-		String ngram_type = args[3];//uni,bi,mix
+			query = query + " AND date:["+date+"-01-01 TO "+date+"-12-30]";
+		boolean useForSearchOnlyTitle = Boolean.parseBoolean(args[2]);
+		final int minN = Integer.parseInt(args[3]);
+		final int maxN = Integer.parseInt(args[4]);
 		
-		//experiment output files
-		String experimentsFileTF = "../experiments/"+query+"TF.csv";
-		String experimentsFilePMIclassic = "../experiments/"+query+"PMIclassic.csv";
-		String experimentsFilePMIpeak = "../experiments/"+query+"PMIpeak.csv";
-		//==========================================================//
-		
-        
 		/*
 		 * Variables
 		 */
-		//==========================================================//
-		int totalNumberOfDocuments = -1;
-        int totalNumberOfDocumentsWithTitle = -1;
-        int totalNumberOfDocumentsWithContent = -1;
-		int totalNumberOfRelevantDocuments = -1;
-		int totalNumberOfDocumentsInGivenPeriod = -1;
-//		int totalNumberOfDocumentsWithTitleInGivenPeriod = -1;
-//		int totalNumberOfDocumentsWithContentInGivenPeriod = -1;
+		int MAX_DOCS = 10000;
 		List<NGram> ngramList = new ArrayList<NGram>();
-		//==========================================================//
-        
-        
+		//after removing the non exost in Ngram index
+		List<NGram> finalNGramList = new ArrayList<NGram>();
+
+		HashMap<String,Integer> peakPeriodUnigramsMap = new HashMap<String,Integer>();
+		int totalNumberOfRelevantDocuments = 0;
+		int N_peak = 0;//total number of words in peak period(uni,bi or mix)
+		int N_corpus = 0;//total number of words in coprus(uni,bi or mix)
+		int N_query_peakPeriod = 0;//total number of words in query + peak period
+		
+		//FILES
+		String dutchStopWordFile = "/Users/mimis/Development/EclipseProject/PeakModel/data/stopWords/empty.txt";
+		String fileWithTotalTFperYear = "/Users/mimis/Development/EclipseProject/PeakModel/index/PeakPeriodTFIndex/peakPeriodTFunigrams.tsv";
+		String indexKbCorpusFileName = "/Users/mimis/Development/EclipseProject/PeakModel/index/KB_1950_1995";
+		String indexKbUnigramFileName = "./index/IndexKB1gram16-17-18-19Min10TimesSorted";
+		//experiment output files
+		String experimentsFileTF = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+query+"_"+date+"TF.csv";
+		String experimentsFilePMIclassic = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+query+"_"+date+"PMIclassic.csv";
+		String experimentsFilePMIpeak = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+query+"_"+date+"PMIpeak.csv";
+		String experimentsFilePMIpeakTF_query_peak = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+query+"_"+date+"PMIpeakTF_query_peak.csv";
+		//==========================================================End Parameters==========================================================//
+
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		//========================================================== Lucene  ==========================================================//
+
+		
         /*
+         * Corpus and Ngram indexes
 		 * Index Dir + Reader + Searcher + Analyzer + QueryParser
 		 */
         Directory indexDir = HelperLucene.getIndexDir(indexKbCorpusFileName);
-        DirectoryReader reader = DirectoryReader.open(indexDir);
-        IndexSearcher searcher = new IndexSearcher(reader);
-        Analyzer analyzer = HelperLucene.getKbAnalyzer(dutchStopWordFile);
-        TotalHitCountCollector collectorOnlyForHitCount = new TotalHitCountCollector();
-        
+        IndexSearcher searcher = new IndexSearcher(DirectoryReader.open(indexDir));
+        Directory indexUnigramDir = HelperLucene.getIndexDir(indexKbUnigramFileName);
+        IndexSearcher uniGramSearcher = new IndexSearcher(DirectoryReader.open(indexUnigramDir));
+        Analyzer queryAnalyzer = HelperLucene.getKbAnalyzer(dutchStopWordFile);
+        Analyzer NgramAnalyzerForTokenization = HelperLucene.getNGramAnalyzer(dutchStopWordFile,minN,maxN);
         
         /*
-         * QueryParser
+         * QueryParser based on the input parameter 'use only title' or not
          */
-//        QueryParser queryParser = new QueryParser(Version.LUCENE_43, "title", analyzer);
-        MultiFieldQueryParser queryParser = new MultiFieldQueryParser(Version.LUCENE_43, new String[] {"content", "title"},analyzer);
+        QueryParser ngramIndexParser = new QueryParser(Version.LUCENE_43, "ngram", queryAnalyzer);
+        QueryParser queryParser = null;
+        if(useForSearchOnlyTitle)
+        	queryParser = new QueryParser(Version.LUCENE_43, "title", queryAnalyzer);
+        else
+        	queryParser = new MultiFieldQueryParser(Version.LUCENE_43, new String[] {"content", "title"},queryAnalyzer);
+      //==========================================================ENd LUCENE===================================================================//
         
         
         
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+		//========================================================== MAIN  ==========================================================//
 
+        /*
+		 * Get peak period Maps:  
+		 * 		N_peak_period
+		 * 		N_corpus(Year:TotalWords)
+		 */
+		Helper.getPeakPeriodIndex(fileWithTotalTFperYear, peakPeriodUnigramsMap);
+		N_peak = peakPeriodUnigramsMap.get(date);//TODO this may return null pointer exception
+		N_corpus = peakPeriodUnigramsMap.get("TotalWords");
+		//TODO sum up big grams total numebr of words
+		if(maxN==2){
+			
+		}
         
+       
         
         /*
-         * Get total number of document with title  or content text in the whole index
-         * 	**THESE ARE CONTSTANTS!!!!**
+         * 2.1 Whole Query  Search: Get relevant docs to the given query
+         * 2.2 Get the N-Grams Stats: 
+         * 		C(w_i)_query_and_peak_period 
          */
-        totalNumberOfDocumentsWithTitle = 19376917;//reader.getDocCount("title");
-        totalNumberOfDocumentsWithContent = 19102728;//reader.getDocCount("content");
-        totalNumberOfDocuments = 19442493;//reader.numDocs();
-		        
-        
-        /*
-         *  1.Query Date Search: Get total Number Of Documents In Given Period
-         */
-        HelperLucene.queryIndexWithCollector(queryParser,collectorOnlyForHitCount, searcher, date);
-        totalNumberOfDocumentsInGivenPeriod = collectorOnlyForHitCount.getTotalHits();
-        
-        
-        
-        /*
-         * 2.1 Whole Query  Search: Get relevant docs to the given query, the total number of relevant docs and the terms with their info that exist in  
-         */
-		TopDocs topDocs = HelperLucene.queryIndexGetTopDocs(queryParser,searcher, query,MAX_DOCS);
+        TopDocs topDocs = HelperLucene.queryIndexGetTopDocs(queryParser,searcher, query,MAX_DOCS);
 		ScoreDoc[] hits = topDocs.scoreDocs;
 		totalNumberOfRelevantDocuments = hits.length;
-
-		
+        if(totalNumberOfRelevantDocuments==0){
+        	System.out.println("Zero Results :/");
+        }else{
+			for (int i = 0; i < hits.length; ++i) {
+				int docId = hits[i].doc;
+				final Document doc = searcher.doc(docId);
+				final String title = doc.get("title");				
+				List<String> tokenList = HelperLucene.tokenizeString(NgramAnalyzerForTokenization, title);
+				Helper.mapTokenListToNGramList(tokenList, "title", ngramList);
+//				System.out.println("\tDoc id:" + docId + "\tTitle:"+ title + " Date:" + doc.get("date")	+ "\tUrl:" + doc.get("url"));
+			}
+        }
+	
         /*
-         * 2.2 Get the N-Grams with their Document Frequency and Total Frequency in each field!
+         * Compute => 
+         * 		N_query_peakPeriod
+         * 		C(w_i)_peakPeriod
+         * 		C(w_i)_corpus
          */
-        System.out.println("HITS:"+totalNumberOfRelevantDocuments);
-        int countProcessDocs = 0;
-		if(getNgramStats){
-	        if(totalNumberOfRelevantDocuments==0){
-	        	System.out.println("Zero Results :/");
-	        }else{
-	        	TermsEnum termsEnum = null;
-				for (int i = 0; i < hits.length; ++i) {
-					int docId = hits[i].doc;
-					final Document doc = searcher.doc(docId);
-					System.out.println(countProcessDocs++ +"\tDoc id:" + docId + "\tTitle:"+ doc.get("title") + " Date:" + doc.get("date")	+ "\tUrl:" + doc.get("url"));
-					
-					final Terms titleTermVector = reader.getTermVector(docId,"title");
-
-					//TODO keep only unigram or bigrams or all of them based on the input
-					HelperLucene.mapTermVectorToNGramList(reader, titleTermVector, termsEnum, "title", ngramList,ngram_type);
-				    
-	//				 final Terms contentTermVector = reader.getTermVector(docId,"content");
-	//				 HelperLucene.displayTermVector(reader,contentTermVector, termsEnum,"content");
-					System.out.println("Unique Ngrams:"+ngramList.size());
-				}
-	        }
-		}
-		
-		
-        /*
-         * 3. Calculate Statistical Measures
-         */
-		System.out.println("Calculate Statistical Measures for NGrams....");
         for(NGram ngram:ngramList){
-        	//Title
-        	ngram.setDf_time(HelperLucene.getNgramDf(ngram.getNgram(), date, "title", queryParser, searcher));
-        	ngram.calculateProbabilities(totalNumberOfDocumentsWithTitle, totalNumberOfRelevantDocuments, totalNumberOfDocumentsInGivenPeriod);
-        	ngram.computePMIClasic();
-        	ngram.computePMItime();
+        	N_query_peakPeriod += ngram.getTf_query_peak();
+        	getNgramTotalTfAndTFperYear(ngram, date, ngramIndexParser, uniGramSearcher, MAX_DOCS);
+        }
+
+        //remove ngramsthat dont exist in NGram index
+        for(NGram ngram:ngramList){
+        	if(ngram.getTf_corpus() != 0 && ngram.getTf_peak() != 0)
+        		finalNGramList.add(ngram);
         }
         
         
         
-
         /*
-         * 4. Sort NGrams By:
+         * Compute Probabilities and Statistical Measures
+         */
+        for(NGram ngram:finalNGramList){
+        	ngram.calculateProbabilities(N_corpus, N_query_peakPeriod, N_peak);
+        	ngram.computePMIClasic();
+        	ngram.computePMIpeak();
+        	ngram.computePMIpeakTimesTf_query_peak();
+        }
+    	
+       	
+        /*
+         * Sort NGrams By:
          * 	a.TF
          *  b.PMI_classic
          *  c.PMI_time
          */
-        if(getNgramStats){
-	       	Collections.sort(ngramList, NGram.COMPARATOR_TOTAL_TF);
-	       	writeNgramToCsv(ngramList, experimentsFileTF, topBestTerms);
-	       	Collections.sort(ngramList, NGram.COMPARATOR_PMI_CLASSIC);
-	       	writeNgramToCsv(ngramList, experimentsFilePMIclassic, topBestTerms);
-	       	Collections.sort(ngramList, NGram.COMPARATOR_PMI_TIME);
-	       	writeNgramToCsv(ngramList, experimentsFilePMIpeak, topBestTerms);
-        }        
+       	Collections.sort(finalNGramList, NGram.COMPARATOR_TOTAL_TF);
+       	writeNgramToCsv(finalNGramList, experimentsFileTF);
+       	Collections.sort(finalNGramList, NGram.COMPARATOR_PMI_CLASSIC);
+      	writeNgramToCsv(finalNGramList, experimentsFilePMIclassic);
+       	Collections.sort(finalNGramList, NGram.COMPARATOR_PMI_PEAK);
+       	writeNgramToCsv(finalNGramList, experimentsFilePMIpeak);
+       	Collections.sort(finalNGramList, NGram.COMPARATOR_PMI_PEAK_TIMES_TF_Query_Peak);
+       	writeNgramToCsv(finalNGramList, experimentsFilePMIpeakTF_query_peak);
+      //==========================================================End MAIN===================================================================//
        	
-        
        	
        	
-        
+       	
+       	
+       	
         /*
          * 5. Display results
          */
@@ -193,7 +219,8 @@ public class SearchLuceneIndex {
         System.out.println("Query:"+query);
         System.out.println("====================================================================================================");
         System.out.println("TotalNumberOfRelevantDocuments:"+totalNumberOfRelevantDocuments);
-        System.out.println("TotalNumberOfDocumentsInGivenPeriod:"+totalNumberOfDocumentsInGivenPeriod+"\tTotalNumberOfDocumentWithTitle:"+totalNumberOfDocumentsWithTitle + "\tTotalNumberOfDocumentWithContent:"+totalNumberOfDocumentsWithContent+"\tTotalDocs:"+totalNumberOfDocuments);
+        System.out.println("====================================================================================================");
+        System.out.println("N_coprus:"+N_corpus+"\tN_peakPeriod:"+N_peak+"\tN_query_peakPeriod:"+N_query_peakPeriod);
         System.out.println("====================================================================================================");
         
         
@@ -204,17 +231,55 @@ public class SearchLuceneIndex {
 	    System.out.println("#Total Indexing run time:"+ (endTime-startTime)/1000);
 	}
 	
+	/**
+	 * Get:
+	 	 * 		C(w_i)_peakPeriod
+         * 		C(w_i)_corpus
+	 * @param ngram
+	 * @param year
+	 * @param queryParser
+	 * @param searcher
+	 * @param MAX_DOCS
+	 * @throws ParseException
+	 * @throws IOException
+	 */
+	public static void getNgramTotalTfAndTFperYear(NGram ngram,String year,QueryParser queryParser,IndexSearcher searcher,int MAX_DOCS) throws ParseException, IOException{
+		TopDocs topDocs = HelperLucene.queryIndexGetTopDocs(queryParser,searcher, ngram.getNgram(),MAX_DOCS);
+		ScoreDoc[] hits = topDocs.scoreDocs;
+		if(hits.length==0)
+			return;
+		else{
+			int docId = hits[0].doc;
+			final Document doc = searcher.doc(docId);
+			final int tfCorpus =  Integer.parseInt(doc.get("totalFrequency"));
+			final String freqPerYear = doc.get("freqPerYear");
+			final int tfYear = getTfOfYear(year, freqPerYear);
+			ngram.setTf_peak(tfYear);
+			ngram.setTf_corpus(tfCorpus);
+		}
+	}
 	
-	public static void writeNgramToCsv(List<NGram> ngramList, String experimentsFile, int topBestTerms) throws IOException{
-		String csvExpnationOutput = "ngram ,total_tf_query,P_w,P_w_Given_query_time,P_w_Given_time,PMI_classic,PMI_time";
+	public static int getTfOfYear(String year,String tfPerYear){
+		String[] tfYearArray = tfPerYear.split(",");
+		for(String tfYear:tfYearArray){
+			if(tfYear.startsWith(year)){
+				return Integer.parseInt(tfYear.split(":")[1]);
+			}
+		}
+		return 0;
+	}
+
+	
+	public static void writeNgramToCsv(List<NGram> ngramList, String experimentsFile) throws IOException{
+		if(ngramList.isEmpty())
+			return;
+		String csvExpnationOutput = "ngram ,total_tf_query,df_query,df_corpus,df_time,P_w,P_w_Given_query_time,P_w_Given_time,PMI_classic,PMI_peak";
     	System.out.println(csvExpnationOutput);
         Helper.writeLineToFile(experimentsFile,csvExpnationOutput, false,true);
-    	int countTerms = 1;
         for(NGram ngram:ngramList){
-        	System.out.println(ngram.toStringCsvCompact());
-        	Helper.writeLineToFile(experimentsFile, ngram.toStringCsvCompact(), true, true);
-        	if(countTerms++ >= topBestTerms)
-        		break;
+        	String ngramToString = ngram.toString();
+        	System.out.println(ngramToString);
+        	Helper.writeLineToFile(experimentsFile, ngramToString, true, true);
         }
 	}
 }

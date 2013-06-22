@@ -28,6 +28,7 @@ import org.apache.lucene.analysis.core.StopAnalyzer;
 import org.apache.lucene.analysis.core.StopFilter;
 import org.apache.lucene.analysis.core.TypeTokenFilter;
 import org.apache.lucene.analysis.miscellaneous.LengthFilter;
+import org.apache.lucene.analysis.shingle.ShingleFilter;
 import org.apache.lucene.analysis.standard.ClassicAnalyzer;
 import org.apache.lucene.analysis.standard.ClassicTokenizer;
 import org.apache.lucene.analysis.standard.StandardFilter;
@@ -58,8 +59,12 @@ import org.apache.lucene.util.Version;
  *        are corrected (see <a href="https://issues.apache.org/jira/browse/LUCENE-1068">LUCENE-1068</a>)
  * </ul>
  */
-public final class KbAnalyzer extends StopwordAnalyzerBase {
+public final class NGramAnalyzer extends StopwordAnalyzerBase {
 
+  public  int MIN_GRAM = 1;
+  public  int MAX_GRAM = 1;
+
+	
   /** Default maximum allowed token length */
   public static final int DEFAULT_MAX_TOKEN_LENGTH = 255;
 
@@ -73,26 +78,22 @@ public final class KbAnalyzer extends StopwordAnalyzerBase {
    * @param matchVersion Lucene version to match See {@link
    * <a href="#version">above</a>}
    * @param stopWords stop words */
-  public KbAnalyzer(Version matchVersion, CharArraySet stopWords) {
-    super(matchVersion, stopWords);
+  public NGramAnalyzer(Version matchVersion, CharArraySet stopWords,int MIN_GRAM,int MAX_GRAM) {
+	    super(matchVersion, stopWords);
+	  this.MIN_GRAM = MIN_GRAM;
+	  this.MAX_GRAM = MAX_GRAM;
+    
   }
 
-  /** Builds an analyzer with the default stop words ({@link
-   * #STOP_WORDS_SET}).
-   * @param matchVersion Lucene version to match See {@link
-   * <a href="#version">above</a>}
-   */
-  public KbAnalyzer(Version matchVersion) {
-    this(matchVersion, STOP_WORDS_SET);
-  }
+  
 
   /** Builds an analyzer with the stop words from the given reader.
    * @see WordlistLoader#getWordSet(Reader, Version)
    * @param matchVersion Lucene version to match See {@link
    * <a href="#version">above</a>}
    * @param stopwords Reader to read stop words from */
-  public KbAnalyzer(Version matchVersion, Reader stopwords) throws IOException {
-    this(matchVersion, loadStopwordSet(stopwords, matchVersion));
+  public NGramAnalyzer(Version matchVersion, Reader stopwords,int MIN_GRAM,int MAX_GRAM) throws IOException {
+    this(matchVersion, loadStopwordSet(stopwords, matchVersion),MIN_GRAM,MAX_GRAM);
   }
 
   /**
@@ -122,11 +123,13 @@ public final class KbAnalyzer extends StopwordAnalyzerBase {
     tok = new StopFilter(matchVersion, tok, stopwords);
     tok = new LengthFilter(false, tok, 3, 25);
     tok = new TypeTokenFilter(false, tok, new HashSet<String>(Arrays.asList( "<NUM>")));    
+    if(this.MIN_GRAM>1)
+    	tok = new ShingleFilter(tok, this.MIN_GRAM,this.MAX_GRAM);
 
     return new TokenStreamComponents(src, tok) {
       @Override
       protected void setReader(final Reader reader) throws IOException {
-        src.setMaxTokenLength(KbAnalyzer.this.maxTokenLength);
+        src.setMaxTokenLength(NGramAnalyzer.this.maxTokenLength);
         super.setReader(reader);
       }
     };
