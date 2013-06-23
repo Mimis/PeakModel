@@ -25,6 +25,9 @@ public class NGram {
 	private double PMI_classic;
 	private double PMI_peak;
 	private double PMI_peak_times_tf_query_peak;
+	private double LOG_Likelyhood_classic;
+	private double LOG_Likelyhood_peak;
+
 	/**
 	 * @param ngram
 	 * @param field
@@ -199,11 +202,39 @@ public class NGram {
 	}
 	
 	
-	
+	/**
+	 * @return the lOG_Likelyhood_classic
+	 */
+	public double getLOG_Likelyhood_classic() {
+		return LOG_Likelyhood_classic;
+	}
+
+	/**
+	 * @param lOG_Likelyhood_classic the lOG_Likelyhood_classic to set
+	 */
+	public void setLOG_Likelyhood_classic(double lOG_Likelyhood_classic) {
+		LOG_Likelyhood_classic = lOG_Likelyhood_classic;
+	}
+
+	/**
+	 * @return the lOG_Likelyhood_peak
+	 */
+	public double getLOG_Likelyhood_peak() {
+		return LOG_Likelyhood_peak;
+	}
+
+	/**
+	 * @param lOG_Likelyhood_peak the lOG_Likelyhood_peak to set
+	 */
+	public void setLOG_Likelyhood_peak(double lOG_Likelyhood_peak) {
+		LOG_Likelyhood_peak = lOG_Likelyhood_peak;
+	}
+
+	//========================================================  PROBABILITIES ======================================================================
 	//P(w) = tf_w_corpus / N_corpus
 	//P(w|query,peak) = tf_w_query_peak / |D|query
 	//P(w|time_peak) = df_w_time_peak / |D|time_peak
-	public void calculateProbabilities(int N_corpus, int N_query_peakPeriod,int N_peak){
+	public void calculateProbabilities(long N_corpus, long N_query_peakPeriod,long N_peak){
 		this.P_w = (double) this.tf_corpus / N_corpus;
 		this.P_w_Given_time = (double) this.tf_peak / N_peak;
 		this.P_w_Given_query_peak = (double) this.tf_query_peak / N_query_peakPeriod;
@@ -214,7 +245,7 @@ public class NGram {
 	 * Calculate classic PMI as below:
 	 * 	PMI(w|query,peak) = log P(w|query,peak) - log P(w)
 	 */
-	public void computePMIClasic() {
+	public void computePMIClassic() {
 		this.PMI_classic = Helper.log2(this.P_w_Given_query_peak) - Helper.log2(this.P_w);
 	}
 	
@@ -231,10 +262,35 @@ public class NGram {
 	 * 	PMI(w|query,peak) = (log P(w|query,peak) - log P(w|time_peak)) * log(tf_query_peak)
 	 */
 	public void computePMIpeakTimesTf_query_peak() {
-		this.PMI_peak_times_tf_query_peak = (Helper.log2(this.P_w_Given_query_peak) - Helper.log2(this.P_w_Given_time)) * this.tf_query_peak;
+		this.PMI_peak_times_tf_query_peak = (Helper.log2(this.P_w_Given_query_peak) - Helper.log2(this.P_w_Given_time)) * Helper.log2(this.tf_query_peak);
 	}
 	
 	
+	
+	/**
+	 * Calculate LOG_Likelyhood_classic as below:
+	 * 	LOG_Likelyhood_classic(w|query,peak) = 2 * log P(w|query,peak) * log (P(w|query,peak) / P(w))
+	 */
+	public void computeLOGlikelyhoodClassic() {
+		this.LOG_Likelyhood_classic = 2 * Helper.log2(this.P_w_Given_query_peak) * Helper.log2(this.P_w_Given_query_peak / this.P_w );
+	}
+
+
+	/**
+	 * Calculate LOG_Likelyhood_peak as below:
+	 * 	LOG_Likelyhood_classic(w|query,peak) = 2 * log P(w|query,peak) * log (P(w|query,peak) / P(w|peak))
+	 */
+	public void computeLOGlikelyhoodPeak() {
+		this.LOG_Likelyhood_peak = 2 * Helper.log2(this.P_w_Given_query_peak) * Helper.log2(this.P_w_Given_query_peak / this.P_w_Given_time );
+	}
+
+	
+	//========================================================  END PROBABILITIES ======================================================================
+	
+
+	public String toStringCompact() {
+		return ngram + "(" + tf_query_peak + ")";
+	}
 
 	/* (non-Javadoc)
 	 * @see java.lang.Object#toString()
@@ -298,12 +354,18 @@ public class NGram {
     /**
 	 * Sort by PMI_peak_times_tf_query_peak
 	 */
-	public static Comparator<NGram> COMPARATOR_PMI_PEAK_TIMES_TF_Query_Peak = new Comparator<NGram>()
+	public static Comparator<NGram> COMPARATOR_PMI_PEAK_TIMES_TF = new Comparator<NGram>()
     {
         public int compare(NGram o1, NGram o2){
-            return o2.tf_query_peak - o1.tf_query_peak;
+            if(o2.PMI_peak_times_tf_query_peak > o1.PMI_peak_times_tf_query_peak )
+            	return 1;
+            else if(o2.PMI_peak_times_tf_query_peak < o1.PMI_peak_times_tf_query_peak )
+            	return 0;
+            else 
+            	return 0;
         }
     };
+    
 	/**
 	 * Sort by PMI classic
 	 */
@@ -332,6 +394,36 @@ public class NGram {
             else 
             	return 0;
         }
+    };
+
+    /**
+     * SORT BY LOG CLASSIC
+     */
+    public static Comparator<NGram> COMPARATOR_LOG_CLASSIC = new Comparator<NGram>()
+    {
+    	 public int compare(NGram o1, NGram o2){
+             if(o2.LOG_Likelyhood_classic > o1.LOG_Likelyhood_classic )
+             	return 1;
+             else if(o2.LOG_Likelyhood_classic < o1.LOG_Likelyhood_classic )
+             	return 0;
+             else 
+             	return 0;
+         }
+    };
+    
+    /**
+     * SORT BY LOG PEAK
+     */
+    public static Comparator<NGram> COMPARATOR_LOG_PEAK = new Comparator<NGram>()
+    {
+    	 public int compare(NGram o1, NGram o2){
+             if(o2.LOG_Likelyhood_peak > o1.LOG_Likelyhood_peak )
+             	return 1;
+             else if(o2.LOG_Likelyhood_peak < o1.LOG_Likelyhood_peak )
+             	return 0;
+             else 
+             	return 0;
+         }
     };
 
 }

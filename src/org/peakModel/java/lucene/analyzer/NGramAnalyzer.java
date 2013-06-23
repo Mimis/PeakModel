@@ -120,11 +120,14 @@ public final class NGramAnalyzer extends StopwordAnalyzerBase {
     
     TokenStream tok = new StandardFilter(matchVersion, src);
     tok = new LowerCaseFilter(matchVersion, tok);
-    tok = new StopFilter(matchVersion, tok, stopwords);
-    tok = new LengthFilter(false, tok, 3, 25);
-    tok = new TypeTokenFilter(false, tok, new HashSet<String>(Arrays.asList( "<NUM>")));    
+    StopFilter stopFilter = new StopFilter(matchVersion, tok, stopwords);
+    stopFilter.setEnablePositionIncrements(false);
+    tok = stopFilter; 
+    tok = new LengthFilter(true, tok, 3, 25);
+    tok = new TypeTokenFilter(true, tok, new HashSet<String>(Arrays.asList( "<NUM>")));    
     if(this.MIN_GRAM>1)
-    	tok = new ShingleFilter(tok, this.MIN_GRAM,this.MAX_GRAM);
+    	tok= new ShingleFilter(tok, this.MIN_GRAM,this.MAX_GRAM);    	
+    
 
     return new TokenStreamComponents(src, tok) {
       @Override

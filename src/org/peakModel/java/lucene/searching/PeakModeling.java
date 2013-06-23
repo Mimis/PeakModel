@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.core.KeywordAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
@@ -21,7 +22,7 @@ import org.peakModel.java.ngram.NGram;
 import org.peakModel.java.utils.Helper;
 import org.peakModel.java.utils.HelperLucene;
 
-public class SearchLuceneIndex {
+public class PeakModeling {
 
 	/**
 	 * @param args
@@ -49,22 +50,28 @@ public class SearchLuceneIndex {
 		//after removing the non exost in Ngram index
 		List<NGram> finalNGramList = new ArrayList<NGram>();
 
-		HashMap<String,Integer> peakPeriodUnigramsMap = new HashMap<String,Integer>();
+		HashMap<String,Long> peakPeriodMap = new HashMap<String,Long>();
 		int totalNumberOfRelevantDocuments = 0;
-		int N_peak = 0;//total number of words in peak period(uni,bi or mix)
-		int N_corpus = 0;//total number of words in coprus(uni,bi or mix)
-		int N_query_peakPeriod = 0;//total number of words in query + peak period
+		long N_peak = 0;//total number of words in peak period(uni,bi or mix)
+		long N_corpus = 0;//total number of words in coprus(uni,bi or mix)
+		long N_query_peakPeriod = 0;//total number of words in query + peak period
 		
 		//FILES
-		String dutchStopWordFile = "/Users/mimis/Development/EclipseProject/PeakModel/data/stopWords/empty.txt";
-		String fileWithTotalTFperYear = "/Users/mimis/Development/EclipseProject/PeakModel/index/PeakPeriodTFIndex/peakPeriodTFunigrams.tsv";
+		String dutchStopWordFile = "/Users/mimis/Development/EclipseProject/PeakModel/data/stopWords/dutch.txt";
+		
 		String indexKbCorpusFileName = "/Users/mimis/Development/EclipseProject/PeakModel/index/KB_1950_1995";
-		String indexKbUnigramFileName = "./index/IndexKB1gram16-17-18-19Min10TimesSorted";
+		String indexKbUnigramFileName = "/Users/mimis/Development/EclipseProject/PeakModel/index/IndexKB1gram16-17-18-19Min10TimesSorted";
+		String indexKbBigramFileName = "/Users/mimis/Development/EclipseProject/PeakModel/index/IndexKB2gramMin10PerYear1840-1995";
+		String fileWithTotalTFperYearUnigram = "/Users/mimis/Development/EclipseProject/PeakModel/index/PeakPeriodTFIndex/peakPeriodTFunigrams.tsv";
+		String fileWithTotalTFperYearBigram = "/Users/mimis/Development/EclipseProject/PeakModel/index/PeakPeriodTFIndex/peakPeriodTFbigrams.tsv";
+		
 		//experiment output files
-		String experimentsFileTF = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+query+"_"+date+"TF.csv";
-		String experimentsFilePMIclassic = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+query+"_"+date+"PMIclassic.csv";
-		String experimentsFilePMIpeak = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+query+"_"+date+"PMIpeak.csv";
-		String experimentsFilePMIpeakTF_query_peak = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+query+"_"+date+"PMIpeakTF_query_peak.csv";
+		String experimentsFileTF = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+query+"_"+date+"_TF_"+minN+"gram.csv";
+		String experimentsFilePMIclassic = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+query+"_"+date+"_PMIclassic_"+minN+"gram.csv";
+		String experimentsFilePMIpeak = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+query+"_"+date+"_PMIpeak_"+minN+"gram.csv";
+		String experimentsFilePMIpeakTF_query_peak = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+query+"_"+date+"_PMIpeak_times_TF_"+minN+"gram.csv";
+		String experimentsFileLOGclassic = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+query+"_"+date+"_LOGclassic_"+minN+"gram.csv";
+		String experimentsFileLOGpeak = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+query+"_"+date+"_LOGpeak_"+minN+"gram.csv";
 		//==========================================================End Parameters==========================================================//
 
 		
@@ -93,17 +100,19 @@ public class SearchLuceneIndex {
          * Corpus and Ngram indexes
 		 * Index Dir + Reader + Searcher + Analyzer + QueryParser
 		 */
+        Directory indexNgramDir = null;
+        IndexSearcher nGramSearcher = null;
+
         Directory indexDir = HelperLucene.getIndexDir(indexKbCorpusFileName);
         IndexSearcher searcher = new IndexSearcher(DirectoryReader.open(indexDir));
-        Directory indexUnigramDir = HelperLucene.getIndexDir(indexKbUnigramFileName);
-        IndexSearcher uniGramSearcher = new IndexSearcher(DirectoryReader.open(indexUnigramDir));
         Analyzer queryAnalyzer = HelperLucene.getKbAnalyzer(dutchStopWordFile);
         Analyzer NgramAnalyzerForTokenization = HelperLucene.getNGramAnalyzer(dutchStopWordFile,minN,maxN);
         
+
         /*
          * QueryParser based on the input parameter 'use only title' or not
          */
-        QueryParser ngramIndexParser = new QueryParser(Version.LUCENE_43, "ngram", queryAnalyzer);
+        QueryParser ngramIndexParser = new QueryParser(Version.LUCENE_43, "ngram", new KeywordAnalyzer());
         QueryParser queryParser = null;
         if(useForSearchOnlyTitle)
         	queryParser = new QueryParser(Version.LUCENE_43, "title", queryAnalyzer);
@@ -130,14 +139,19 @@ public class SearchLuceneIndex {
 		 * 		N_peak_period
 		 * 		N_corpus(Year:TotalWords)
 		 */
-		Helper.getPeakPeriodIndex(fileWithTotalTFperYear, peakPeriodUnigramsMap);
-		N_peak = peakPeriodUnigramsMap.get(date);//TODO this may return null pointer exception
-		N_corpus = peakPeriodUnigramsMap.get("TotalWords");
-		//TODO sum up big grams total numebr of words
-		if(maxN==2){
-			
-		}
-        
+        if(minN==1){
+			Helper.getPeakPeriodIndex(fileWithTotalTFperYearUnigram, peakPeriodMap);
+			N_peak = peakPeriodMap.get(date);//TODO this may return null pointer exception
+			N_corpus = peakPeriodMap.get("TotalWords");
+	        indexNgramDir = HelperLucene.getIndexDir(indexKbUnigramFileName);
+	        nGramSearcher = new IndexSearcher(DirectoryReader.open(indexNgramDir));
+        }else{
+        	Helper.getPeakPeriodIndex(fileWithTotalTFperYearBigram, peakPeriodMap);
+			N_peak = peakPeriodMap.get(date);//TODO this may return null pointer exception
+			N_corpus = peakPeriodMap.get("TotalWords");
+	        indexNgramDir = HelperLucene.getIndexDir(indexKbBigramFileName);
+	        nGramSearcher = new IndexSearcher(DirectoryReader.open(indexNgramDir));
+        }
        
         
         /*
@@ -156,8 +170,10 @@ public class SearchLuceneIndex {
 				final Document doc = searcher.doc(docId);
 				final String title = doc.get("title");				
 				List<String> tokenList = HelperLucene.tokenizeString(NgramAnalyzerForTokenization, title);
+				if(minN == 2)
+					tokenList = Helper.keepOnlyBigramsFromList(tokenList);
 				Helper.mapTokenListToNGramList(tokenList, "title", ngramList);
-//				System.out.println("\tDoc id:" + docId + "\tTitle:"+ title + " Date:" + doc.get("date")	+ "\tUrl:" + doc.get("url"));
+				//System.out.println("\tDoc id:" + docId + "\tTitle:"+ title + " Date:" + doc.get("date")	+ "\tUrl:" + doc.get("url"));
 			}
         }
 	
@@ -167,10 +183,12 @@ public class SearchLuceneIndex {
          * 		C(w_i)_peakPeriod
          * 		C(w_i)_corpus
          */
+		long startTime2 = System.currentTimeMillis();
         for(NGram ngram:ngramList){
         	N_query_peakPeriod += ngram.getTf_query_peak();
-        	getNgramTotalTfAndTFperYear(ngram, date, ngramIndexParser, uniGramSearcher, MAX_DOCS);
+        	getNgramTotalTfAndTFperYear(ngram, date, ngramIndexParser, nGramSearcher, MAX_DOCS);
         }
+	    System.out.println("#Query Ngram index time:"+ (System.currentTimeMillis()-startTime2)/1000);
 
         //remove ngramsthat dont exist in NGram index
         for(NGram ngram:ngramList){
@@ -185,9 +203,11 @@ public class SearchLuceneIndex {
          */
         for(NGram ngram:finalNGramList){
         	ngram.calculateProbabilities(N_corpus, N_query_peakPeriod, N_peak);
-        	ngram.computePMIClasic();
+        	ngram.computePMIClassic();
         	ngram.computePMIpeak();
         	ngram.computePMIpeakTimesTf_query_peak();
+        	ngram.computeLOGlikelyhoodClassic();
+        	ngram.computeLOGlikelyhoodPeak();
         }
     	
        	
@@ -203,8 +223,13 @@ public class SearchLuceneIndex {
       	writeNgramToCsv(finalNGramList, experimentsFilePMIclassic);
        	Collections.sort(finalNGramList, NGram.COMPARATOR_PMI_PEAK);
        	writeNgramToCsv(finalNGramList, experimentsFilePMIpeak);
-       	Collections.sort(finalNGramList, NGram.COMPARATOR_PMI_PEAK_TIMES_TF_Query_Peak);
+       	Collections.sort(finalNGramList, NGram.COMPARATOR_PMI_PEAK_TIMES_TF);
        	writeNgramToCsv(finalNGramList, experimentsFilePMIpeakTF_query_peak);
+       	Collections.sort(finalNGramList, NGram.COMPARATOR_LOG_CLASSIC);
+       	writeNgramToCsv(finalNGramList, experimentsFileLOGclassic);
+       	Collections.sort(finalNGramList, NGram.COMPARATOR_LOG_PEAK);
+       	writeNgramToCsv(finalNGramList, experimentsFileLOGpeak);
+
       //==========================================================End MAIN===================================================================//
        	
        	
@@ -244,7 +269,8 @@ public class SearchLuceneIndex {
 	 * @throws IOException
 	 */
 	public static void getNgramTotalTfAndTFperYear(NGram ngram,String year,QueryParser queryParser,IndexSearcher searcher,int MAX_DOCS) throws ParseException, IOException{
-		TopDocs topDocs = HelperLucene.queryIndexGetTopDocs(queryParser,searcher, ngram.getNgram(),MAX_DOCS);
+		String ngramText = ngram.getNgram().replace(" ", "?");//this is for bigrams
+		TopDocs topDocs = HelperLucene.queryIndexGetTopDocs(queryParser,searcher, ngramText,MAX_DOCS);
 		ScoreDoc[] hits = topDocs.scoreDocs;
 		if(hits.length==0)
 			return;
@@ -277,8 +303,8 @@ public class SearchLuceneIndex {
     	System.out.println(csvExpnationOutput);
         Helper.writeLineToFile(experimentsFile,csvExpnationOutput, false,true);
         for(NGram ngram:ngramList){
-        	String ngramToString = ngram.toString();
-        	System.out.println(ngramToString);
+        	String ngramToString = ngram.toStringCompact();
+        	//System.out.println(ngramToString);
         	Helper.writeLineToFile(experimentsFile, ngramToString, true, true);
         }
 	}

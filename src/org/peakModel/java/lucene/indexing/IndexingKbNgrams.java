@@ -6,15 +6,12 @@ import java.io.FileReader;
 import java.io.IOException;
 
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.analysis.util.CharArraySet;
+import org.apache.lucene.analysis.core.KeywordAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.StringField;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.store.Directory;
-import org.apache.lucene.util.Version;
-import org.peakModel.java.utils.Helper;
 import org.peakModel.java.utils.HelperLucene;
 
 public class IndexingKbNgrams {
@@ -50,8 +47,8 @@ public class IndexingKbNgrams {
 
 		
 		String ngramFile="/Users/mimis/Development/EclipseProject/PeakModel/data/ngrams/IndexKB1gram16-17-18-19Min10TimesSorted.tsv";
-		String indexKbNgramFileName = "../index/IndexKB1gram16-17-18-19Min10TimesSorted";
-		String dutchStopWordFile = "../data/stopWords/empty.txt";
+		String indexKbNgramFileName = "/Users/mimis/Development/EclipseProject/PeakModel/index/IndexKB1gram16-17-18-19Min10TimesSorted";
+		String dutchStopWordFile = "/Users/mimis/Development/EclipseProject/PeakModel/data/stopWords/empty.txt";
 		double setRAMBufferSizeMB = 1024;
 		boolean createNewIndex = true;
 		IndexingKbNgrams indexingKbCorpus = new IndexingKbNgrams(indexKbNgramFileName, dutchStopWordFile,setRAMBufferSizeMB,createNewIndex);
@@ -80,7 +77,7 @@ public class IndexingKbNgrams {
 					if (!line.isEmpty()){
 						String[] ngramInfo = line.split("\t");
 						this.addDoc(ngramInfo[0], ngramInfo[2], ngramInfo[3]);
-						if(count++ % 1000000 == 0)
+						if(count++ % 100000 == 0)
 							System.out.println(line);
 					}
 				}
@@ -106,8 +103,8 @@ public class IndexingKbNgrams {
 		 * Analyzer
 		 */
         
-    	CharArraySet stopWordsSet = Helper.getStopWordsSet(this.dutchStopWordFile);
-        Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_43, stopWordsSet);
+    	//CharArraySet stopWordsSet = Helper.getStopWordsSet(this.dutchStopWordFile);
+        Analyzer analyzer = new KeywordAnalyzer();
 
         /*
          * InderWriter

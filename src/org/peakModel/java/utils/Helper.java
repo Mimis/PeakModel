@@ -19,8 +19,16 @@ import org.peakModel.java.ngram.NGram;
 
 public class Helper {
 
-	
-	public static void getPeakPeriodIndex(String fileWithTFperYear,HashMap<String,Integer> peakPeriodMap){
+	public static List<String> keepOnlyBigramsFromList(List<String> tokenList){
+		List<String> tokenOnlyBiList = new ArrayList<String>();
+		for(String token:tokenList){
+			if(token.contains(" "))
+				tokenOnlyBiList.add(token);
+		}
+		return tokenOnlyBiList;
+	}
+
+	public static void getPeakPeriodIndex(String fileWithTFperYear,HashMap<String,Long> peakPeriodMap){
 		File file = new File(fileWithTFperYear);
 		try {
 			BufferedReader input = new BufferedReader(new FileReader(file));
@@ -29,7 +37,7 @@ public class Helper {
 				while ((line = input.readLine()) != null) {
 					if (!line.isEmpty()){
 						String[] tfPerYear = line.split(",");
-						peakPeriodMap.put(tfPerYear[0],Integer.parseInt(tfPerYear[1]));
+						peakPeriodMap.put(tfPerYear[0],Long.parseLong(tfPerYear[1]));
 					}
 				}
 			} finally {
@@ -65,7 +73,7 @@ public class Helper {
 	
 	
 	public static double log2( double a ){
-		return Math.log(a) / Math.log(2);
+		return (double) Math.log(a) / Math.log(2);
 	}
 	
 	public static void writeLineToFile(String filename, String text, boolean append, boolean addNewLine) throws IOException{

@@ -16,16 +16,18 @@ public class CreatePeakPeriodIndex {
 	 * @throws IOException 
 	 */
 	public static void main(String[] args) throws IOException {
-		String fileWithTFperYear = "/Users/mimis/Development/EclipseProject/PeakModel/index/PeakPeriodTFIndex/peakPeriodTFunigrams.tsv";
-		String ngramFileToRead = "/Users/mimis/Development/EclipseProject/PeakModel/data/ngrams/IndexKB1gram16-17-18-19Min10TimesSorted.tsv";
-		HashMap<String,Integer> peakPeriodMap = new HashMap<String,Integer>();
+		String fileWithTFperYear = "/Users/mimis/Development/EclipseProject/PeakModel/index/PeakPeriodTFIndex/peakPeriodTFbigrams.tsv";
+		String ngramFileToRead = "/Users/mimis/Development/EclipseProject/PeakModel/data/ngrams/IndexKB2gramMin10PerYear1840-1995.tsv";
+//		IndexKB1gram16-17-18-19Min10TimesSorted
+//		IndexKB2gramMin10PerYear1840-1995.tsv
+		HashMap<String,Long> peakPeriodMap = new HashMap<String,Long>();
 		
 		
 		
 		createPeakPeriodIndex(ngramFileToRead, peakPeriodMap);
-		int totalNumberOfWords = 0;
+		long totalNumberOfWords = 0;
 		Helper.writeLineToFile(fileWithTFperYear, "", false, false);
-		for(Map.Entry<String, Integer> entry:peakPeriodMap.entrySet()){
+		for(Map.Entry<String, Long> entry:peakPeriodMap.entrySet()){
 			System.out.println("Year:"+entry.getKey()+"\tTF:"+entry.getValue());
 			Helper.writeLineToFile(fileWithTFperYear, entry.getKey()+","+entry.getValue(), true, true);
 			totalNumberOfWords += entry.getValue();
@@ -35,7 +37,7 @@ public class CreatePeakPeriodIndex {
 		
 	}
 	
-	public static void createPeakPeriodIndex(String ngramFileToRead,HashMap<String,Integer> peakPeriodMap){
+	public static void createPeakPeriodIndex(String ngramFileToRead,HashMap<String,Long> peakPeriodMap){
 		File file = new File(ngramFileToRead);
 		try {
 			BufferedReader input = new BufferedReader(new FileReader(file));
@@ -49,10 +51,10 @@ public class CreatePeakPeriodIndex {
 						for(String tfYear:tfPerYear){
 							String[] tfYearArray = tfYear.split(":");
 							String year = tfYearArray[0];
-							int tf = Integer.parseInt(tfYearArray[1]);
+							long tf = Integer.parseInt(tfYearArray[1]);
 							
 							if(peakPeriodMap.containsKey(year)){
-								int tfOld = peakPeriodMap.get(year);
+								long tfOld = peakPeriodMap.get(year);
 								peakPeriodMap.put(year, tfOld+tf);
 							}
 							else{
