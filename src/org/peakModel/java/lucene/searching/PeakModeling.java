@@ -45,7 +45,8 @@ public class PeakModeling {
 		/*
 		 * Variables
 		 */
-		int MAX_DOCS = 10000;
+		final int NUMBER_THREADS = 100;
+		final int MAX_DOCS = 10000;
 		List<NGram> ngramList = new ArrayList<NGram>();
 		//after removing the non exost in Ngram index
 		List<NGram> finalNGramList = new ArrayList<NGram>();
@@ -57,7 +58,7 @@ public class PeakModeling {
 		long N_query_peakPeriod = 0;//total number of words in query + peak period
 		
 		//FILES
-		String dutchStopWordFile = "/Users/mimis/Development/EclipseProject/PeakModel/data/stopWords/dutch.txt";
+		String dutchStopWordFile = "/Users/mimis/Development/EclipseProject/PeakModel/data/stopWords/empty.txt";
 		
 		String indexKbCorpusFileName = "/Users/mimis/Development/EclipseProject/PeakModel/index/KB_1950_1995";
 		String indexKbUnigramFileName = "/Users/mimis/Development/EclipseProject/PeakModel/index/IndexKB1gram16-17-18-19Min10TimesSorted";
@@ -66,12 +67,12 @@ public class PeakModeling {
 		String fileWithTotalTFperYearBigram = "/Users/mimis/Development/EclipseProject/PeakModel/index/PeakPeriodTFIndex/peakPeriodTFbigrams.tsv";
 		
 		//experiment output files
-		String experimentsFileTF = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+query+"_"+date+"_TF_"+minN+"gram.csv";
-		String experimentsFilePMIclassic = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+query+"_"+date+"_PMIclassic_"+minN+"gram.csv";
-		String experimentsFilePMIpeak = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+query+"_"+date+"_PMIpeak_"+minN+"gram.csv";
-		String experimentsFilePMIpeakTF_query_peak = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+query+"_"+date+"_PMIpeak_times_TF_"+minN+"gram.csv";
-		String experimentsFileLOGclassic = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+query+"_"+date+"_LOGclassic_"+minN+"gram.csv";
-		String experimentsFileLOGpeak = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+query+"_"+date+"_LOGpeak_"+minN+"gram.csv";
+		String experimentsFileTF = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+args[0]+"_"+date+"_TF_"+minN+"gram.csv";
+		String experimentsFilePMIclassic = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+args[0]+"_"+date+"_PMIclassic_"+minN+"gram.csv";
+		String experimentsFilePMIpeak = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+args[0]+"_"+date+"_PMIpeak_"+minN+"gram.csv";
+		String experimentsFilePMIpeakTF_query_peak = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+args[0]+"_"+date+"_PMIpeak_times_TF_"+minN+"gram.csv";
+		String experimentsFileLOGclassic = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+args[0]+"_"+date+"_LOGclassic_"+minN+"gram.csv";
+		String experimentsFileLOGpeak = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+args[0]+"_"+date+"_LOGpeak_"+minN+"gram.csv";
 		//==========================================================End Parameters==========================================================//
 
 		
@@ -112,7 +113,6 @@ public class PeakModeling {
         /*
          * QueryParser based on the input parameter 'use only title' or not
          */
-        QueryParser ngramIndexParser = new QueryParser(Version.LUCENE_43, "ngram", new KeywordAnalyzer());
         QueryParser queryParser = null;
         if(useForSearchOnlyTitle)
         	queryParser = new QueryParser(Version.LUCENE_43, "title", queryAnalyzer);
@@ -177,6 +177,9 @@ public class PeakModeling {
 			}
         }
 	
+        
+        
+        
         /*
          * Compute => 
          * 		N_query_peakPeriod
@@ -184,9 +187,15 @@ public class PeakModeling {
          * 		C(w_i)_corpus
          */
 		long startTime2 = System.currentTimeMillis();
+	    List<Thread> threads = new ArrayList<Thread>();
+	    int countThreads = 1;
         for(NGram ngram:ngramList){
+            QueryParser ngramIndexQueryParser = new QueryParser(Version.LUCENE_43, "ngram", new KeywordAnalyzer());
         	N_query_peakPeriod += ngram.getTf_query_peak();
-        	getNgramTotalTfAndTFperYear(ngram, date, ngramIndexParser, nGramSearcher, MAX_DOCS);
+        	//linear processing
+//        	getNgramTotalTfAndTFperYear(ngram, date, ngramIndexQueryParser, nGramSearcher, MAX_DOCS);
+        	//multihreading
+        	PeakModeling.NgramSearchMultyThread(countThreads++, NUMBER_THREADS, threads, ngram, date, ngramIndexQueryParser, nGramSearcher, MAX_DOCS);
         }
 	    System.out.println("#Query Ngram index time:"+ (System.currentTimeMillis()-startTime2)/1000);
 
@@ -255,7 +264,17 @@ public class PeakModeling {
         long endTime = System.currentTimeMillis();
 	    System.out.println("#Total Indexing run time:"+ (endTime-startTime)/1000);
 	}
-	
+	public static void NgramSearchMultyThread(int countThreads,int NUMBER_THREADS, List<Thread> threads,NGram ngram,String date,QueryParser ngramIndexQueryParser,IndexSearcher nGramSearcher, int MAX_DOCS){
+    	NGramIndexSearch task = new NGramIndexSearch(ngram, date, ngramIndexQueryParser, nGramSearcher, MAX_DOCS);
+        Thread worker = new Thread(task);
+        worker.start();
+        threads.add(worker);
+        if(countThreads % NUMBER_THREADS == 0){
+        	Helper.waitThreadsToFinish(threads);
+        	System.out.println("wait to finish threads....");
+        }
+
+	}
 	/**
 	 * Get:
 	 	 * 		C(w_i)_peakPeriod

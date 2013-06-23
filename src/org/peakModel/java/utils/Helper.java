@@ -19,6 +19,19 @@ import org.peakModel.java.ngram.NGram;
 
 public class Helper {
 
+	public static void waitThreadsToFinish(List<Thread> threads){
+        int running = 0;
+        do {
+          running = 0;
+          for (Thread thread : threads) {
+            if (thread.isAlive()) {
+              running++;
+            }
+          }
+        } while (running > 0);
+	}
+
+	
 	public static List<String> keepOnlyBigramsFromList(List<String> tokenList){
 		List<String> tokenOnlyBiList = new ArrayList<String>();
 		for(String token:tokenList){
