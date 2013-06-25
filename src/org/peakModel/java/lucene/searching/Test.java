@@ -4,13 +4,13 @@ import java.io.IOException;
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.index.DirectoryReader;
-import org.apache.lucene.index.Term;
 import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.Version;
+import org.peakModel.java.utils.Helper;
 import org.peakModel.java.utils.HelperLucene;
 
 public class Test {
@@ -27,22 +27,23 @@ public class Test {
 //        668,bernhard,23,23,12935,322
 
 		
-		String indexKbCorpusFileName = "./index/test";
-        Directory indexDir = HelperLucene.getIndexDir(indexKbCorpusFileName);
-        DirectoryReader reader = DirectoryReader.open(indexDir);
-        IndexSearcher searcher = new IndexSearcher(reader);
-		String dutchStopWordFile = "./data/stopWords/dutch.txt";
-        Analyzer analyzer = HelperLucene.getKbAnalyzer(dutchStopWordFile);
-        QueryParser queryParser = new MultiFieldQueryParser(Version.LUCENE_43, new String[] {"content", "title"},analyzer);
-
-		
-		
-		String ngram = "ROTTERDAM";
-		String date = "date:[1956-01-01 TO 1996-12-31]";
-		
-		final int df_corpus = reader.docFreq(new Term("title", ngram));					
-		int df_time = HelperLucene.getNgramDf(ngram, date, "title", queryParser, searcher);
-		System.out.println("df_corpus:"+df_corpus+"\tdf_time:"+df_time);
+//		String indexKbCorpusFileName = "/Users/mimis/Development/EclipseProject/PeakModel/index/IndexKB2gramMin10PerYear1840-1995";
+//        Directory indexDir = HelperLucene.getIndexDir(indexKbCorpusFileName);
+//        DirectoryReader reader = DirectoryReader.open(indexDir);
+//        IndexSearcher searcher = new IndexSearcher(reader);
+//		String dutchStopWordFile = "./data/stopWords/dutch.txt";
+//        Analyzer analyzer = HelperLucene.getKbAnalyzer(dutchStopWordFile);
+//        QueryParser queryParser = new MultiFieldQueryParser(Version.LUCENE_43, new String[] {"content", "title"},analyzer);
+//
+//        long c = searcher.collectionStatistics("ngram").sumDocFreq();
+//        System.out.println(c);
+        
+//		String ngram = "ROTTERDAM";
+//		String date = "date:[1956-01-01 TO 1996-12-31]";
+//		
+//		final int df_corpus = reader.docFreq(new Term("title", ngram));					
+//		int df_time = HelperLucene.getNgramDf(ngram, date, "title", queryParser, searcher);
+//		System.out.println("df_corpus:"+df_corpus+"\tdf_time:"+df_time);
 		
 		
 		}

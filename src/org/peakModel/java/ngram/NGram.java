@@ -22,10 +22,11 @@ public class NGram {
 	private double P_w_Given_query_peak;
 	private double P_w_Given_time; 
 	//statistical measures
-	private double PMI_classic;
+	private double PMI_corpus;
 	private double PMI_peak;
 	private double PMI_peak_times_tf_query_peak;
-	private double LOG_Likelyhood_classic;
+	private double PMI_corpus_times_tf_query_peak;
+	private double LOG_Likelyhood_corpus;
 	private double LOG_Likelyhood_peak;
 
 	/**
@@ -45,6 +46,27 @@ public class NGram {
 	
 	
 	
+	/**
+	 * @return the lOG_Likelyhood_corpus
+	 */
+	public double getLOG_Likelyhood_corpus() {
+		return LOG_Likelyhood_corpus;
+	}
+
+	/**
+	 * @param lOG_Likelyhood_corpus the lOG_Likelyhood_corpus to set
+	 */
+	public void setLOG_Likelyhood_corpus(double lOG_Likelyhood_corpus) {
+		LOG_Likelyhood_corpus = lOG_Likelyhood_corpus;
+	}
+
+	/**
+	 * @param pMI_corpus the pMI_corpus to set
+	 */
+	public void setPMI_corpus(double pMI_corpus) {
+		PMI_corpus = pMI_corpus;
+	}
+
 	/**
 	 * @return the pMI_peak_times_tf_query_peak
 	 */
@@ -162,17 +184,17 @@ public class NGram {
 
 	
 	/**
-	 * @return the pMI_classic
+	 * @return the pMI_corpus
 	 */
-	public double getPMI_classic() {
-		return this.PMI_classic;
+	public double getPMI_corpus() {
+		return this.PMI_corpus;
 	}
 
 	/**
-	 * @param pMI_classic the pMI_classic to set
+	 * @param pMI_classic the pMI_corpus to set
 	 */
-	public void setPMI_classic(double pMI_classic) {
-		this.PMI_classic = pMI_classic;
+	public void setPMI_classic(double PMI_corpus) {
+		this.PMI_corpus = PMI_corpus;
 	}
 
 	/**
@@ -202,20 +224,7 @@ public class NGram {
 	}
 	
 	
-	/**
-	 * @return the lOG_Likelyhood_classic
-	 */
-	public double getLOG_Likelyhood_classic() {
-		return LOG_Likelyhood_classic;
-	}
-
-	/**
-	 * @param lOG_Likelyhood_classic the lOG_Likelyhood_classic to set
-	 */
-	public void setLOG_Likelyhood_classic(double lOG_Likelyhood_classic) {
-		LOG_Likelyhood_classic = lOG_Likelyhood_classic;
-	}
-
+	
 	/**
 	 * @return the lOG_Likelyhood_peak
 	 */
@@ -230,6 +239,21 @@ public class NGram {
 		LOG_Likelyhood_peak = lOG_Likelyhood_peak;
 	}
 
+	/**
+	 * @return the pMI_classic_times_tf_query_peak
+	 */
+	public double getPMI_corpus_times_tf_query_peak() {
+		return PMI_corpus_times_tf_query_peak;
+	}
+
+	/**
+	 * @param pMI_classic_times_tf_query_peak the pMI_classic_times_tf_query_peak to set
+	 */
+	public void setPMI_corpus_times_tf_query_peak(
+			double pMI_corpus_times_tf_query_peak) {
+		PMI_corpus_times_tf_query_peak = pMI_corpus_times_tf_query_peak;
+	}
+
 	//========================================================  PROBABILITIES ======================================================================
 	//P(w) = tf_w_corpus / N_corpus
 	//P(w|query,peak) = tf_w_query_peak / |D|query
@@ -242,11 +266,11 @@ public class NGram {
 	
 	
 	/**
-	 * Calculate classic PMI as below:
+	 * Calculate PMI_corpus  as below:
 	 * 	PMI(w|query,peak) = log P(w|query,peak) - log P(w)
 	 */
-	public void computePMIClassic() {
-		this.PMI_classic = Helper.log2(this.P_w_Given_query_peak) - Helper.log2(this.P_w);
+	public void computePMIcorpus() {
+		this.PMI_corpus = Helper.log2(this.P_w_Given_query_peak) - Helper.log2(this.P_w);
 	}
 	
 	/**
@@ -265,24 +289,43 @@ public class NGram {
 		this.PMI_peak_times_tf_query_peak = (Helper.log2(this.P_w_Given_query_peak) - Helper.log2(this.P_w_Given_time)) * Helper.log2(this.tf_query_peak);
 	}
 	
+	/**
+	 * Calculate PMI on Corpus period multiply by tf_query_peak:
+	 * 	PMI(w|query,peak) = (log P(w|query,peak) - log P(w|time_peak)) * log(tf_query_peak)
+	 */
+	public void computePMI_corpus_times_tf_query_peak() {
+		this.PMI_corpus_times_tf_query_peak = (Helper.log2(this.P_w_Given_query_peak) - Helper.log2(this.P_w)) * Helper.log2(this.tf_query_peak);
+	}
 	
 	
 	/**
-	 * Calculate LOG_Likelyhood_classic as below:
-	 * 	LOG_Likelyhood_classic(w|query,peak) = 2 * log P(w|query,peak) * log (P(w|query,peak) / P(w))
+	 * Calculate LOG_Likelyhood_corpus as below:
+	 * 	LOG_Likelyhood_classic(w|query,peak) => 
+	 * G2 = 2(a log(a) + b log(b) + c log(c) + d log(d)− (a + b)log(a + b) – (a + c)log(a + c)− (b + d)log(b + d) – (c + d)log(c + d)+ (a + b + c + d)log(a + b + c + d))
 	 */
-	public void computeLOGlikelyhoodClassic() {
-		this.LOG_Likelyhood_classic = 2 * Helper.log2(this.P_w_Given_query_peak) * Helper.log2(this.P_w_Given_query_peak / this.P_w );
+	public void computeLOGlikelyhoodCorpus(long N_query_peakPeriod,long N_corpus) {
+		int a = this.tf_query_peak;
+		int b = this.tf_corpus;
+		long c = N_query_peakPeriod - a;
+		long d = N_corpus - b;
+		this.LOG_Likelyhood_corpus = 2 * (a * Helper.log2(a) + b * Helper.log2(b) + c * Helper.log2(c) + d * Helper.log2(d) - (a + b) * Helper.log2(a + b) - (a + c) * Helper.log2(a + c) - (b + d) * Helper.log2(b + d) - (c + d) * Helper.log2(c + d)+ (a + b + c + d)* Helper.log2(a + b + c + d));
+		
 	}
-
 
 	/**
 	 * Calculate LOG_Likelyhood_peak as below:
-	 * 	LOG_Likelyhood_classic(w|query,peak) = 2 * log P(w|query,peak) * log (P(w|query,peak) / P(w|peak))
+	 * 	LOG_Likelyhood_classic(w|query,peak) => 
+	 * G2 = 2(a log(a) + b log(b) + c log(c) + d log(d)− (a + b)log(a + b) – (a + c)log(a + c)− (b + d)log(b + d) – (c + d)log(c + d)+ (a + b + c + d)log(a + b + c + d))
 	 */
-	public void computeLOGlikelyhoodPeak() {
-		this.LOG_Likelyhood_peak = 2 * Helper.log2(this.P_w_Given_query_peak) * Helper.log2(this.P_w_Given_query_peak / this.P_w_Given_time );
+	public void computeLOGlikelyhoodPeak(long N_query_peakPeriod,long N_peak) {
+		int a = this.tf_query_peak;
+		int b = this.tf_peak;
+		long c = N_query_peakPeriod - a;
+		long d = N_peak - b;
+		this.LOG_Likelyhood_peak = 2 * (a * Helper.log2(a) + b * Helper.log2(b) + c * Helper.log2(c) + d * Helper.log2(d) - (a + b) * Helper.log2(a + b) - (a + c) * Helper.log2(a + c) - (b + d) * Helper.log2(b + d) - (c + d) * Helper.log2(c + d)+ (a + b + c + d)* Helper.log2(a + b + c + d));
+		
 	}
+
 
 	
 	//========================================================  END PROBABILITIES ======================================================================
@@ -292,14 +335,15 @@ public class NGram {
 		return ngram + "(" + tf_query_peak + ")";
 	}
 
+
 	/* (non-Javadoc)
 	 * @see java.lang.Object#toString()
 	 */
 	@Override
 	public String toString() {
-		return "NGram [ngram=" + ngram + ", tf_query_peak=" + tf_query_peak
-				+ ", tf_peak=" + tf_peak + ", tf_corpus=" + tf_corpus
-				+ ", field=" + field + "]";
+		return ngram + "," + tf_query_peak + "," + tf_peak + "," + tf_corpus + "," + field + "," + P_w + "," + P_w_Given_query_peak	+ "," + P_w_Given_time + ","
+				+ PMI_corpus + "," + PMI_peak + ","	+ PMI_peak_times_tf_query_peak	+ "," + PMI_corpus_times_tf_query_peak + ","
+				+ LOG_Likelyhood_corpus + "," + LOG_Likelyhood_peak ;
 	}
 
 	/* (non-Javadoc)
@@ -366,15 +410,31 @@ public class NGram {
         }
     };
     
+    
+    /**
+	 * Sort by PMI_classic_times_tf_query_peak
+	 */
+	public static Comparator<NGram> COMPARATOR_PMI_CORPUS_TIMES_TF = new Comparator<NGram>()
+    {
+        public int compare(NGram o1, NGram o2){
+            if(o2.PMI_corpus_times_tf_query_peak > o1.PMI_corpus_times_tf_query_peak )
+            	return 1;
+            else if(o2.PMI_corpus_times_tf_query_peak < o1.PMI_corpus_times_tf_query_peak )
+            	return 0;
+            else 
+            	return 0;
+        }
+    };
+    
 	/**
 	 * Sort by PMI classic
 	 */
-	public static Comparator<NGram> COMPARATOR_PMI_CLASSIC = new Comparator<NGram>()
+	public static Comparator<NGram> COMPARATOR_PMI_CORPUS = new Comparator<NGram>()
     {
         public int compare(NGram o1, NGram o2){
-            if(o2.PMI_classic > o1.PMI_classic )
+            if(o2.PMI_corpus > o1.PMI_corpus )
             	return 1;
-            else if(o2.PMI_classic < o1.PMI_classic )
+            else if(o2.PMI_corpus < o1.PMI_corpus )
             	return 0;
             else 
             	return 0;
@@ -399,12 +459,12 @@ public class NGram {
     /**
      * SORT BY LOG CLASSIC
      */
-    public static Comparator<NGram> COMPARATOR_LOG_CLASSIC = new Comparator<NGram>()
+    public static Comparator<NGram> COMPARATOR_LOG_CORPUS = new Comparator<NGram>()
     {
     	 public int compare(NGram o1, NGram o2){
-             if(o2.LOG_Likelyhood_classic > o1.LOG_Likelyhood_classic )
+             if(o2.LOG_Likelyhood_corpus > o1.LOG_Likelyhood_corpus )
              	return 1;
-             else if(o2.LOG_Likelyhood_classic < o1.LOG_Likelyhood_classic )
+             else if(o2.LOG_Likelyhood_corpus < o1.LOG_Likelyhood_corpus )
              	return 0;
              else 
              	return 0;

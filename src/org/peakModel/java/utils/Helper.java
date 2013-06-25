@@ -84,7 +84,8 @@ public class Helper {
 		return stopWordsSet;
 	}
 	
-	
+
+
 	public static double log2( double a ){
 		return (double) Math.log(a) / Math.log(2);
 	}
