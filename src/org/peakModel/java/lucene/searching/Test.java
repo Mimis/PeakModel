@@ -21,31 +21,19 @@ public class Test {
 	 * @throws ParseException 
 	 */
 	public static void main(String[] args) throws IOException, ParseException {
-//		  RANK,ngram ,total_tf_query,df_query,df_corpus,df_time
-//        1,lshiguro,2,1,1,1
-//        143,bernhard's,1,1,10,1
-//        668,bernhard,23,23,12935,322
+//		prinses beatrix(560,9951,102929)
+//		huwelijk beatrix(78,13,44)
+//		claus von(96,4541,8171)
+		int N_query_peakPeriod = 8945;
+		int N_peak = 132956608;
 
-		
-//		String indexKbCorpusFileName = "/Users/mimis/Development/EclipseProject/PeakModel/index/IndexKB2gramMin10PerYear1840-1995";
-//        Directory indexDir = HelperLucene.getIndexDir(indexKbCorpusFileName);
-//        DirectoryReader reader = DirectoryReader.open(indexDir);
-//        IndexSearcher searcher = new IndexSearcher(reader);
-//		String dutchStopWordFile = "./data/stopWords/dutch.txt";
-//        Analyzer analyzer = HelperLucene.getKbAnalyzer(dutchStopWordFile);
-//        QueryParser queryParser = new MultiFieldQueryParser(Version.LUCENE_43, new String[] {"content", "title"},analyzer);
-//
-//        long c = searcher.collectionStatistics("ngram").sumDocFreq();
-//        System.out.println(c);
-        
-//		String ngram = "ROTTERDAM";
-//		String date = "date:[1956-01-01 TO 1996-12-31]";
-//		
-//		final int df_corpus = reader.docFreq(new Term("title", ngram));					
-//		int df_time = HelperLucene.getNgramDf(ngram, date, "title", queryParser, searcher);
-//		System.out.println("df_corpus:"+df_corpus+"\tdf_time:"+df_time);
-		
-		
-		}
+		int a = 96;
+		int b = 4541;
+		long c = N_query_peakPeriod - a;
+		long d = N_peak - b;
+		double LOG_Likelyhood_peak = 2 * (a * Helper.log2(a) + b * Helper.log2(b) + c * Helper.log2(c) + d * Helper.log2(d) - (a + b) * Helper.log2(a + b) - (a + c) * Helper.log2(a + c) - (b + d) * Helper.log2(b + d) - (c + d) * Helper.log2(c + d)+ (a + b + c + d)* Helper.log2(a + b + c + d));
+
+		System.out.println(LOG_Likelyhood_peak);
+	}
 
 }

@@ -19,7 +19,7 @@ import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.search.TotalHitCountCollector;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.Version;
-import org.peakModel.java.ngram.NGramWithDF;
+import org.peakModel.java.peakModel.NGramWithDF;
 import org.peakModel.java.utils.Helper;
 import org.peakModel.java.utils.HelperLucene;
 

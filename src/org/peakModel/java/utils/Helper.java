@@ -15,10 +15,34 @@ import java.util.Set;
 
 import org.apache.lucene.analysis.util.CharArraySet;
 import org.apache.lucene.util.Version;
-import org.peakModel.java.ngram.NGram;
+import org.peakModel.java.peakModel.NGram;
 
 public class Helper {
+	
+	public static void writeNgramToCsv(List<NGram> ngramList, String experimentsFile) throws IOException{
+		if(ngramList.isEmpty())
+			return;
+		String csvExpnationOutput = "ngram (tf_query_peak, tf_peak, tf_corpus)";
+        Helper.writeLineToFile(experimentsFile,csvExpnationOutput, false,true);
+        for(NGram ngram:ngramList){
+        	String ngramToString = ngram.toStringCompact()  + "\t" + ngram.getPointwiseKL_corpus() + "\t" + ngram.getPointwiseKL_peak_corpus();
+        	Helper.writeLineToFile(experimentsFile, ngramToString, true, true);
+        }
+	}
 
+
+	public static void removeQueryTermsFromNgramList(String initialQuery,List<NGram> ngramList){
+		String qArr[] = initialQuery.split("\\s+");
+		List<NGram> queryNgrams = new ArrayList<NGram>();
+		for(String q:qArr){
+			queryNgrams.add(new NGram(q,"title"));
+		}
+		queryNgrams.add(new NGram(initialQuery,"title"));
+		for(NGram ng:queryNgrams)
+			ngramList.remove(ng);
+	}
+
+	
 	public static void waitThreadsToFinish(List<Thread> threads){
         int running = 0;
         do {

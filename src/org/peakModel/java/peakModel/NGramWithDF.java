@@ -1,4 +1,4 @@
-package org.peakModel.java.ngram;
+package org.peakModel.java.peakModel;
 
 import java.util.Comparator;
 

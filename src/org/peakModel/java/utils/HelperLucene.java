@@ -31,7 +31,7 @@ import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.Version;
 import org.peakModel.java.lucene.analyzer.KbAnalyzer;
 import org.peakModel.java.lucene.analyzer.NGramAnalyzer;
-import org.peakModel.java.ngram.NGramWithDF;
+import org.peakModel.java.peakModel.NGramWithDF;
 
 public class HelperLucene {
 	

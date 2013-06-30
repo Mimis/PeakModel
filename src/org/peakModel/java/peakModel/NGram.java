@@ -1,4 +1,4 @@
-package org.peakModel.java.ngram;
+package org.peakModel.java.peakModel;
 
 import java.util.Comparator;
 
@@ -28,6 +28,9 @@ public class NGram {
 	private double PMI_corpus_times_tf_query_peak;
 	private double LOG_Likelyhood_corpus;
 	private double LOG_Likelyhood_peak;
+	private double PointwiseKL_corpus;
+	private double PointwiseKL_peak;
+	private double PointwiseKL_peak_corpus;
 
 	/**
 	 * @param ngram
@@ -46,6 +49,48 @@ public class NGram {
 	
 	
 	
+	/**
+	 * @return the pointwiseKL_corpus
+	 */
+	public double getPointwiseKL_corpus() {
+		return PointwiseKL_corpus;
+	}
+
+	/**
+	 * @param pointwiseKL_corpus the pointwiseKL_corpus to set
+	 */
+	public void setPointwiseKL_corpus(double pointwiseKL_corpus) {
+		PointwiseKL_corpus = pointwiseKL_corpus;
+	}
+
+	/**
+	 * @return the pointwiseKL_peak
+	 */
+	public double getPointwiseKL_peak() {
+		return PointwiseKL_peak;
+	}
+
+	/**
+	 * @param pointwiseKL_peak the pointwiseKL_peak to set
+	 */
+	public void setPointwiseKL_peak(double pointwiseKL_peak) {
+		PointwiseKL_peak = pointwiseKL_peak;
+	}
+
+	/**
+	 * @return the pointwiseKL_peak_corpus
+	 */
+	public double getPointwiseKL_peak_corpus() {
+		return PointwiseKL_peak_corpus;
+	}
+
+	/**
+	 * @param pointwiseKL_peak_corpus the pointwiseKL_peak_corpus to set
+	 */
+	public void setPointwiseKL_peak_corpus(double pointwiseKL_peak_corpus) {
+		PointwiseKL_peak_corpus = pointwiseKL_peak_corpus;
+	}
+
 	/**
 	 * @return the lOG_Likelyhood_corpus
 	 */
@@ -253,6 +298,14 @@ public class NGram {
 			double pMI_corpus_times_tf_query_peak) {
 		PMI_corpus_times_tf_query_peak = pMI_corpus_times_tf_query_peak;
 	}
+	
+	
+	
+	
+	
+	
+	
+	
 
 	//========================================================  PROBABILITIES ======================================================================
 	//P(w) = tf_w_corpus / N_corpus
@@ -311,7 +364,6 @@ public class NGram {
 		this.LOG_Likelyhood_corpus = 2 * (a * Helper.log2(a) + b * Helper.log2(b) + c * Helper.log2(c) + d * Helper.log2(d) - (a + b) * Helper.log2(a + b) - (a + c) * Helper.log2(a + c) - (b + d) * Helper.log2(b + d) - (c + d) * Helper.log2(c + d)+ (a + b + c + d)* Helper.log2(a + b + c + d));
 		
 	}
-
 	/**
 	 * Calculate LOG_Likelyhood_peak as below:
 	 * 	LOG_Likelyhood_classic(w|query,peak) => 
@@ -322,17 +374,78 @@ public class NGram {
 		int b = this.tf_peak;
 		long c = N_query_peakPeriod - a;
 		long d = N_peak - b;
-		this.LOG_Likelyhood_peak = 2 * (a * Helper.log2(a) + b * Helper.log2(b) + c * Helper.log2(c) + d * Helper.log2(d) - (a + b) * Helper.log2(a + b) - (a + c) * Helper.log2(a + c) - (b + d) * Helper.log2(b + d) - (c + d) * Helper.log2(c + d)+ (a + b + c + d)* Helper.log2(a + b + c + d));
-		
+		this.LOG_Likelyhood_peak = 2 * (a * Helper.log2(a) + b * Helper.log2(b) + c * Helper.log2(c) + d * Helper.log2(d) - (a + b) * Helper.log2(a + b) - (a + c) * Helper.log2(a + c) - (b + d) * Helper.log2(b + d) - (c + d) * Helper.log2(c + d)+ (a + b + c + d)* Helper.log2(a + b + c + d));		
 	}
 
 
+	/**
+	 * Calculate LOG_Likelyhood_peak as below:
+	 * 	LOG_Likelyhood_classic(w|query,peak) => G2 = 2 P(w|N_query_peakPeriod) * ln (P(w|N_query_peakPeriod) / P(w|N_peak))
+	 */
+	public void computeLOGlikelyhoodPeak2(long N_query_peakPeriod,long N_peak) {
+		this.LOG_Likelyhood_peak = 2 * this.P_w_Given_query_peak * Helper.log2(this.P_w_Given_query_peak / this.P_w_Given_time) ;		
+	}
+
+
+	/**
+	 * Calculate LOG_Likelyhood_corpus as below:
+	 * 	LOG_Likelyhood_classic(w|query,peak) => G2 = 2 P(w|N_query_peakPeriod) * ln (P(w|N_query_peakPeriod) / P(w|N_corpus))
+	 */
+	public void computeLOGlikelyhoodCorpus2(long N_query_peakPeriod,long N_corpus) {
+		this.LOG_Likelyhood_corpus = 2 * this.P_w_Given_query_peak * Helper.log2(this.P_w_Given_query_peak / this.P_w) ;
+	}
+
+
+	/**
+	 * Calculate PointwiseKL_peak as below:
+	 * 	PointwiseKL_peak(w|query,peak) => P(w|N_query_peakPeriod) * log (P(w|N_query_peakPeriod) / P(w|N_peak))
+	 */
+	public void computePointwiseKLPeak() {
+		this.PointwiseKL_peak = this.P_w_Given_query_peak * Helper.log2(this.P_w_Given_query_peak / this.P_w_Given_time) ;		
+	}
+
+
+	/**
+	 * Calculate PointwiseKL_corpus as below:
+	 * 	PointwiseKL_corpus(w|query,peak) => P(w|N_query_peakPeriod) * log (P(w|N_query_peakPeriod) / P(w|N_corpus))
+	 */
+	public void computePointwiseKLCorpus() {
+		this.PointwiseKL_corpus = this.P_w_Given_query_peak * Helper.log2(this.P_w_Given_query_peak / this.P_w) ;
+	}
+
+	
+	/**
+	 * Calculate PointwiseKL_corpus_peak as below:
+	 * 	PointwiseKL_corpus(w|query,peak) => P(w|N_query_peakPeriod) * log (P(w|N_query_peakPeriod) / P(w|N_corpus))
+	 */
+	public void computePointwiseKLCorpusPeak() {
+		this.PointwiseKL_peak_corpus = 0.75 * (this.P_w_Given_query_peak * Helper.log2(this.P_w_Given_query_peak / this.P_w)) + 
+									   0.25 * (this.P_w_Given_query_peak * Helper.log2(this.P_w_Given_query_peak / this.P_w_Given_time));
+		
+//		this.PointwiseKL_peak_corpus = this.P_w_Given_query_peak * Helper.log2(this.P_w_Given_query_peak / this.P_w)  * Helper.log2(this.P_w_Given_query_peak / this.P_w_Given_time);
+
+	}
 	
 	//========================================================  END PROBABILITIES ======================================================================
 	
 
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	public String toStringCompact() {
-		return ngram + "(" + tf_query_peak + ")";
+		return ngram + "(" + tf_query_peak + "," + tf_peak  + "," + tf_corpus + ")";
 	}
 
 
@@ -480,6 +593,51 @@ public class NGram {
              if(o2.LOG_Likelyhood_peak > o1.LOG_Likelyhood_peak )
              	return 1;
              else if(o2.LOG_Likelyhood_peak < o1.LOG_Likelyhood_peak )
+             	return 0;
+             else 
+             	return 0;
+         }
+    };
+
+    /**
+     * SORT BY Pointwise KL peak
+     */
+    public static Comparator<NGram> COMPARATOR_POINTWISE_KL_PEAK = new Comparator<NGram>()
+    {
+    	 public int compare(NGram o1, NGram o2){
+             if(o2.PointwiseKL_peak > o1.PointwiseKL_peak )
+             	return 1;
+             else if(o2.PointwiseKL_peak < o1.PointwiseKL_peak )
+             	return 0;
+             else 
+             	return 0;
+         }
+    };
+    
+    /**
+     * SORT BY Pointwise KL corpus
+     */
+    public static Comparator<NGram> COMPARATOR_POINTWISE_KL_CORPUS = new Comparator<NGram>()
+    {
+    	 public int compare(NGram o1, NGram o2){
+             if(o2.PointwiseKL_corpus > o1.PointwiseKL_corpus )
+             	return 1;
+             else if(o2.PointwiseKL_corpus < o1.PointwiseKL_corpus )
+             	return 0;
+             else 
+             	return 0;
+         }
+    };
+
+    /**
+     * SORT BY Pointwise KL corpus
+     */
+    public static Comparator<NGram> COMPARATOR_POINTWISE_KL_PEAK_CORPUS = new Comparator<NGram>()
+    {
+    	 public int compare(NGram o1, NGram o2){
+             if(o2.PointwiseKL_peak_corpus > o1.PointwiseKL_peak_corpus )
+             	return 1;
+             else if(o2.PointwiseKL_peak_corpus < o1.PointwiseKL_peak_corpus )
              	return 0;
              else 
              	return 0;
