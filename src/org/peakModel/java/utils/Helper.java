@@ -25,7 +25,7 @@ public class Helper {
 		String csvExpnationOutput = "ngram (tf_query_peak, tf_peak, tf_corpus)";
         Helper.writeLineToFile(experimentsFile,csvExpnationOutput, false,true);
         for(NGram ngram:ngramList){
-        	String ngramToString = ngram.toStringCompact()  + "\t" + ngram.getPointwiseKL_corpus() + "\t" + ngram.getPointwiseKL_peak_corpus();
+        	String ngramToString = ngram.toStringCompact();
         	Helper.writeLineToFile(experimentsFile, ngramToString, true, true);
         }
 	}
@@ -60,6 +60,14 @@ public class Helper {
 		List<String> tokenOnlyBiList = new ArrayList<String>();
 		for(String token:tokenList){
 			if(token.contains(" "))
+				tokenOnlyBiList.add(token);
+		}
+		return tokenOnlyBiList;
+	}
+	public static List<String> keepOnlyUnigramsFromList(List<String> tokenList){
+		List<String> tokenOnlyBiList = new ArrayList<String>();
+		for(String token:tokenList){
+			if(!token.contains(" "))
 				tokenOnlyBiList.add(token);
 		}
 		return tokenOnlyBiList;

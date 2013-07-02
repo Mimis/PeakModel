@@ -1,6 +1,7 @@
 package org.peakModel.java.peakModel;
 
 import java.util.Comparator;
+import java.util.List;
 
 import org.peakModel.java.utils.Helper;
 
@@ -31,6 +32,7 @@ public class NGram {
 	private double PointwiseKL_corpus;
 	private double PointwiseKL_peak;
 	private double PointwiseKL_peak_corpus;
+	private double phraseness;
 
 	/**
 	 * @param ngram
@@ -49,6 +51,20 @@ public class NGram {
 	
 	
 	
+	/**
+	 * @return the phraseness
+	 */
+	public double getPhraseness() {
+		return phraseness;
+	}
+
+	/**
+	 * @param phraseness the phraseness to set
+	 */
+	public void setPhraseness(double phraseness) {
+		this.phraseness = phraseness;
+	}
+
 	/**
 	 * @return the pointwiseKL_corpus
 	 */
@@ -317,6 +333,9 @@ public class NGram {
 		this.P_w_Given_query_peak = (double) this.tf_query_peak / N_query_peakPeriod;
 	}
 	
+	public void calculateP_query_peakPeriod(long N_query_peakPeriod){
+		this.P_w_Given_query_peak = (double) this.tf_query_peak / N_query_peakPeriod;
+	}
 	
 	/**
 	 * Calculate PMI_corpus  as below:
@@ -400,8 +419,25 @@ public class NGram {
 	 * Calculate PointwiseKL_peak as below:
 	 * 	PointwiseKL_peak(w|query,peak) => P(w|N_query_peakPeriod) * log (P(w|N_query_peakPeriod) / P(w|N_peak))
 	 */
+	public void computePhraseness(List<NGram> unigramList) {
+		double LM_fg_unigram = 0.0;
+		String[] ngramArr = this.ngram.split(" ");
+		for(String ng:ngramArr){
+			int indexOfNgram = unigramList.indexOf(new NGram(ng,this.field));
+			if(LM_fg_unigram==0)
+				LM_fg_unigram = unigramList.get(indexOfNgram).getP_w_Given_query_peak();
+			else
+				LM_fg_unigram *=unigramList.get(indexOfNgram).getP_w_Given_query_peak();
+		}			
+		this.phraseness = this.P_w_Given_query_peak * Helper.log2(this.P_w_Given_query_peak / LM_fg_unigram) ;	
+	}
+
+	/**
+	 * Calculate PointwiseKL_peak as below:
+	 * 	PointwiseKL_peak(w|query,peak) => P(w|N_query_peakPeriod) * log (P(w|N_query_peakPeriod) / P(w|N_peak))
+	 */
 	public void computePointwiseKLPeak() {
-		this.PointwiseKL_peak = this.P_w_Given_query_peak * Helper.log2(this.P_w_Given_query_peak / this.P_w_Given_time) ;		
+		this.PointwiseKL_peak = this.phraseness + this.P_w_Given_query_peak * Helper.log2(this.P_w_Given_query_peak / this.P_w_Given_time) ;		
 	}
 
 
@@ -410,7 +446,7 @@ public class NGram {
 	 * 	PointwiseKL_corpus(w|query,peak) => P(w|N_query_peakPeriod) * log (P(w|N_query_peakPeriod) / P(w|N_corpus))
 	 */
 	public void computePointwiseKLCorpus() {
-		this.PointwiseKL_corpus = this.P_w_Given_query_peak * Helper.log2(this.P_w_Given_query_peak / this.P_w) ;
+		this.PointwiseKL_corpus = this.phraseness + this.P_w_Given_query_peak * Helper.log2(this.P_w_Given_query_peak / this.P_w) ;
 	}
 
 	

@@ -7,10 +7,10 @@ import org.apache.lucene.document.Document;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
 import org.peakModel.java.peakModel.NGram;
-import org.peakModel.java.utils.HelperLucene;
 
 public class NGramIndexSearch implements Runnable {
 	private final List<NGram> ngramList;
@@ -57,7 +57,9 @@ public class NGramIndexSearch implements Runnable {
 		String ngramText = ngram.getNgram().replace(" ", "?");//this is for bigrams
 		if(ngramText.contains(":"))
 			return;
-		TopDocs topDocs = HelperLucene.queryIndexGetTopDocs(queryParser,searcher, ngramText,MAX_DOCS);
+		Query query = queryParser.parse(ngramText);
+		TopDocs topDocs = searcher.search(query, MAX_DOCS);
+
 		ScoreDoc[] hits = topDocs.scoreDocs;
 		if(hits.length==0)
 			return;
