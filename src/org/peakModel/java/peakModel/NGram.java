@@ -18,11 +18,15 @@ public class NGram {
 	private int tf_peak;
 	private int tf_corpus;
 	private String field;
+	private int nr_of_years_appearance;
 	//probabilities
 	private double P_w;
 	private double P_w_Given_query_peak;
 	private double P_w_Given_time; 
 	//statistical measures
+	private double TF_IDF;
+	private double IDF; //idf per year appearance:measures how rare is the ngram!
+	private double phraseness; //measures how likely the terms fo the ngram to appear together..can be evaluated on foreground or background corpus
 	private double PMI_corpus;
 	private double PMI_peak;
 	private double PMI_peak_times_tf_query_peak;
@@ -32,8 +36,11 @@ public class NGram {
 	private double PointwiseKL_corpus;
 	private double PointwiseKL_peak;
 	private double PointwiseKL_peak_corpus;
-	private double phraseness;
-
+	private double DicePeak;
+	private double DiceCorpus;
+	private double PhiSquarePeak;
+	private double PhiSquareCorpus;
+	
 	/**
 	 * @param ngram
 	 * @param field
@@ -51,6 +58,90 @@ public class NGram {
 	
 	
 	
+	/**
+	 * @return the tF_IDF
+	 */
+	public double getTF_IDF() {
+		return TF_IDF;
+	}
+
+	/**
+	 * @param tF_IDF the tF_IDF to set
+	 */
+	public void setTF_IDF(double tF_IDF) {
+		TF_IDF = tF_IDF;
+	}
+
+	/**
+	 * @return the nr_of_years_appearance
+	 */
+	public int getNr_of_years_appearance() {
+		return nr_of_years_appearance;
+	}
+
+	/**
+	 * @param nr_of_years_appearance the nr_of_years_appearance to set
+	 */
+	public void setNr_of_years_appearance(int nr_of_years_appearance) {
+		this.nr_of_years_appearance = nr_of_years_appearance;
+	}
+
+	/**
+	 * @return the dicePeak
+	 */
+	public double getDicePeak() {
+		return DicePeak;
+	}
+
+	/**
+	 * @param dicePeak the dicePeak to set
+	 */
+	public void setDicePeak(double dicePeak) {
+		DicePeak = dicePeak;
+	}
+
+	/**
+	 * @return the diceCorpus
+	 */
+	public double getDiceCorpus() {
+		return DiceCorpus;
+	}
+
+	/**
+	 * @param diceCorpus the diceCorpus to set
+	 */
+	public void setDiceCorpus(double diceCorpus) {
+		DiceCorpus = diceCorpus;
+	}
+
+	/**
+	 * @return the phiSquarePeak
+	 */
+	public double getPhiSquarePeak() {
+		return PhiSquarePeak;
+	}
+
+	/**
+	 * @param phiSquarePeak the phiSquarePeak to set
+	 */
+	public void setPhiSquarePeak(double phiSquarePeak) {
+		PhiSquarePeak = phiSquarePeak;
+	}
+
+	/**
+	 * @return the phiSquareCorpus
+	 */
+	public double getPhiSquareCorpus() {
+		return PhiSquareCorpus;
+	}
+
+	/**
+	 * @param phiSquareCorpus the phiSquareCorpus to set
+	 */
+	public void setPhiSquareCorpus(double phiSquareCorpus) {
+		PhiSquareCorpus = phiSquareCorpus;
+	}
+
 	/**
 	 * @return the phraseness
 	 */
@@ -416,8 +507,9 @@ public class NGram {
 
 
 	/**
-	 * Calculate PointwiseKL_peak as below:
-	 * 	PointwiseKL_peak(w|query,peak) => P(w|N_query_peakPeriod) * log (P(w|N_query_peakPeriod) / P(w|N_peak))
+	 * How likely the ngram appear together...
+	 * Calculate computePhraseness as below(see: A language model approach to keyphrase extraction AND Query by document; IPEIROTIS):
+	 * 	δ(LM_fg_bigram || LM_fg_unigram)
 	 */
 	public void computePhraseness(List<NGram> unigramList) {
 		double LM_fg_unigram = 0.0;
@@ -462,6 +554,60 @@ public class NGram {
 
 	}
 	
+	
+	/**
+	 * Calculate Dice peak
+	 */
+	public void computeDicePeak(long N_query_peakPeriod) {
+		int a = this.tf_query_peak;
+		int b = this.tf_peak;
+		long c = N_query_peakPeriod - a;
+		this.DicePeak = (double) (2 * a) / (2 * a + b + c)  ;		
+	}
+
+	/**
+	 * Calculate Dice corpus
+	 */
+	public void computeDiceCorpus(long N_query_peakPeriod) {
+		int a = this.tf_query_peak;
+		int b = this.tf_corpus;
+		long c = N_query_peakPeriod - a;
+		this.DiceCorpus =  (double) (2 * a) / (2 * a + b + c)  ;		
+	}
+	
+
+	/**
+	 * Calculate PhiSquarePeak
+	 */
+	public void computePhiSquarePeak(long N_query_peakPeriod,long N_peak) {
+		int a = this.tf_query_peak;
+		int b = this.tf_peak;
+		long c = N_query_peakPeriod - a;
+		long d = N_peak - b;
+		this.PhiSquarePeak = a * (double) Math.pow((a*d-b*c),2) / ((a+b) * (a+c) * (b+d) * (c+d));		
+	}
+
+	/**
+	 * Calculate PhiSquareCorpus
+	 */
+	public void computePhiSquareCorpus(long N_query_peakPeriod,long N_corpus) {
+		int a = this.tf_query_peak;
+		int b = this.tf_peak;
+		long c = N_query_peakPeriod - a;
+		long d = N_corpus - b;
+		this.PhiSquareCorpus = a * (double) Math.pow((a*d-b*c),2) / ((a+b) * (a+c) * (b+d) * (c+d));		
+	}
+	
+	
+	/**
+	 * Calculate TF-IDF per year
+	 */
+	public void computeTF_IDF(long N_years) {
+		this.IDF = Helper.log2( (double) N_years / this.nr_of_years_appearance);
+		this.TF_IDF = this.tf_query_peak * this.IDF;		
+	}
+
+	
 	//========================================================  END PROBABILITIES ======================================================================
 	
 
@@ -479,9 +625,11 @@ public class NGram {
 	
 	
 	
-	
+	/* (non-Javadoc)
+	 * @see java.lang.Object#toString()
+	 */
 	public String toStringCompact() {
-		return ngram + "(" + tf_query_peak + "," + tf_peak  + "," + tf_corpus + ")";
+		return ngram + "(" + tf_query_peak + "," + tf_peak  + "," + tf_corpus + ",nr_of_years_appearance: "+ this.nr_of_years_appearance+ "\ttf_idf:"+this.TF_IDF+")";
 	}
 
 
@@ -532,6 +680,15 @@ public class NGram {
 			return false;
 		return true;
 	}
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	
 	//***** COMPARATORS sorting*****//
 	/**
@@ -674,6 +831,97 @@ public class NGram {
              if(o2.PointwiseKL_peak_corpus > o1.PointwiseKL_peak_corpus )
              	return 1;
              else if(o2.PointwiseKL_peak_corpus < o1.PointwiseKL_peak_corpus )
+             	return 0;
+             else 
+             	return 0;
+         }
+    };
+
+    /**
+     * SORT BY DICE peak
+     */
+    public static Comparator<NGram> COMPARATOR_DICE_PEAK = new Comparator<NGram>()
+    {
+    	 public int compare(NGram o1, NGram o2){
+             if(o2.DicePeak > o1.DicePeak )
+             	return 1;
+             else if(o2.DicePeak < o1.DicePeak )
+             	return 0;
+             else 
+             	return 0;
+         }
+    };
+    
+    /**
+     * SORT BY DICE corpus
+     */
+    public static Comparator<NGram> COMPARATOR_DICE_CORPUS = new Comparator<NGram>()
+    {
+    	 public int compare(NGram o1, NGram o2){
+             if(o2.DiceCorpus > o1.DiceCorpus )
+             	return 1;
+             else if(o2.DiceCorpus < o1.DiceCorpus )
+             	return 0;
+             else 
+             	return 0;
+         }
+    };
+
+    
+    /**
+     * SORT BY PhiSquare peak
+     */
+    public static Comparator<NGram> COMPARATOR_PHI_SQUARE_PEAK = new Comparator<NGram>()
+    {
+    	 public int compare(NGram o1, NGram o2){
+             if(o2.PhiSquarePeak > o1.PhiSquarePeak )
+             	return 1;
+             else if(o2.PhiSquarePeak < o1.PhiSquarePeak )
+             	return 0;
+             else 
+             	return 0;
+         }
+    };
+    
+    /**
+     * SORT BY PhiSquare corpus
+     */
+    public static Comparator<NGram> COMPARATOR_PHI_SQUARE_CORPUS = new Comparator<NGram>()
+    {
+    	 public int compare(NGram o1, NGram o2){
+             if(o2.PhiSquareCorpus > o1.PhiSquareCorpus )
+             	return 1;
+             else if(o2.PhiSquareCorpus < o1.PhiSquareCorpus )
+             	return 0;
+             else 
+             	return 0;
+         }
+    };
+
+    /**
+     * SORT BY TF-IDF
+     */
+    public static Comparator<NGram> COMPARATOR_TF_IDF = new Comparator<NGram>()
+    {
+    	 public int compare(NGram o1, NGram o2){
+             if(o2.TF_IDF > o1.TF_IDF )
+             	return 1;
+             else if(o2.TF_IDF < o1.TF_IDF )
+             	return 0;
+             else 
+             	return 0;
+         }
+    };
+
+    /**
+     * SORT BY IDF
+     */
+    public static Comparator<NGram> COMPARATOR_IDF = new Comparator<NGram>()
+    {
+    	 public int compare(NGram o1, NGram o2){
+             if(o2.IDF > o1.IDF )
+             	return 1;
+             else if(o2.IDF < o1.IDF )
              	return 0;
              else 
              	return 0;

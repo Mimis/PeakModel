@@ -1,13 +1,21 @@
 package org.peakModel.java.lucene.searching;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
-import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.core.KeywordAnalyzer;
+import org.apache.lucene.document.Document;
+import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.DirectoryReader;
-import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
+import org.apache.lucene.search.Collector;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.Scorer;
+import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.Version;
 import org.peakModel.java.utils.Helper;
@@ -21,19 +29,70 @@ public class Test {
 	 * @throws ParseException 
 	 */
 	public static void main(String[] args) throws IOException, ParseException {
-//		prinses beatrix(560,9951,102929)
-//		huwelijk beatrix(78,13,44)
-//		claus von(96,4541,8171)
-		int N_query_peakPeriod = 8945;
-		int N_peak = 132956608;
+		String indexKbUnigramFileName = "/Users/mimis/Development/EclipseProject/PeakModel/index/IndexKB1gram16-17-18-19Min10TimesSorted";
+//		String indexKbBigramFileName = "/Users/mimis/Development/EclipseProject/PeakModel/index/IndexKB2gramMin10PerYear1840-1995";
 
-		int a = 96;
-		int b = 4541;
-		long c = N_query_peakPeriod - a;
-		long d = N_peak - b;
-		double LOG_Likelyhood_peak = 2 * (a * Helper.log2(a) + b * Helper.log2(b) + c * Helper.log2(c) + d * Helper.log2(d) - (a + b) * Helper.log2(a + b) - (a + c) * Helper.log2(a + c) - (b + d) * Helper.log2(b + d) - (c + d) * Helper.log2(c + d)+ (a + b + c + d)* Helper.log2(a + b + c + d));
+		Directory  indexNgramDir = HelperLucene.getIndexDir(indexKbUnigramFileName);
+	    DirectoryReader ngramIndexReader = DirectoryReader.open(indexNgramDir);
+	    IndexSearcher nGramSearcher = new IndexSearcher(ngramIndexReader);
+        QueryParser ngramIndexQueryParser = new QueryParser(Version.LUCENE_43, "ngram", new KeywordAnalyzer());
 
-		System.out.println(LOG_Likelyhood_peak);
+
+        List<String> qList = Helper.readFileLineByLineReturnListOfLineString("/Users/mimis/Development/EclipseProject/PeakModel/experiments/baseline_setup/beatrix_1965_LOG_corpus_1gram.csv");
+		long startTime = System.currentTimeMillis();
+
+        for(String ngramText:qList){
+        	ngramText = ngramText.split(",")[0];
+			ngramText = ngramText.replace(" ", "?");//this is for bigrams
+	        System.out.println(ngramText);
+
+			Query query = ngramIndexQueryParser.parse(ngramText);
+			
+			
+			final List<Integer> docIds = new ArrayList<Integer>();
+			nGramSearcher.search(query, new Collector() {
+				   private int docBase;
+				   
+				   // ignore scorer
+				   public void setScorer(Scorer scorer) {
+				   }
+	
+				   // accept docs out of order (for a BitSet it doesn't matter)
+				   public boolean acceptsDocsOutOfOrder() {
+				     return true;
+				   }
+				 
+				   public void collect(int doc) {
+					   docIds.add(doc+docBase);
+					   return;
+				   }
+				 
+				   public void setNextReader(AtomicReaderContext context) {
+				     this.docBase = context.docBase;
+				   }
+				 });
+	
+	        System.out.println(ngramText+"\tLength:"+docIds.size());
+//	        for ( int id:docIds) {
+//				final Document doc = nGramSearcher.doc(id);
+//				System.out.println("\t"+id+"\t"+doc.get("ngram")+"\t"+doc.get("freqPerYear"));
+//	        }		
+        }
+        long endTime = System.currentTimeMillis();
+	    System.out.println("#Total Indexing run time:"+ (endTime-startTime)/1000);
+
+//		TopDocs topDocs = nGramSearcher.search(query, 1000);
+//		ScoreDoc[] hits = topDocs.scoreDocs;
+//        System.out.println(hits.length);
+//        for(int i=0;i<hits.length;i++){
+//        	int docId = hits[i].doc;
+//			final Document doc = ngramIndexReader.document(docId);
+//			System.out.println(docId+"\t"+doc.get("ngram")+"\t"+doc.get("freqPerYear"));
+//        }
+        
+        
+        indexNgramDir.close();
+        ngramIndexReader.close();
 	}
 
 }

@@ -1,15 +1,17 @@
 package org.peakModel.java.lucene.searching;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.lucene.document.Document;
+import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
+import org.apache.lucene.search.Collector;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
-import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.search.Scorer;
 import org.peakModel.java.peakModel.NGram;
 
 public class NGramIndexSearch implements Runnable {
@@ -32,8 +34,12 @@ public class NGramIndexSearch implements Runnable {
 	@Override
 	public void run() {
 		try {
-			for (NGram ngram : this.ngramList)
+			int counter=0;
+			for (NGram ngram : this.ngramList){
 				getNgramTotalTfAndTFperYear(ngram, year,queryParser, searcher, MAX_DOCS);
+				if(counter++ %100 ==0 )
+					System.out.println("Thread:"+counter);
+			}
 		} catch (ParseException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
@@ -57,20 +63,46 @@ public class NGramIndexSearch implements Runnable {
 		String ngramText = ngram.getNgram().replace(" ", "?");//this is for bigrams
 		if(ngramText.contains(":"))
 			return;
+		
 		Query query = queryParser.parse(ngramText);
-		TopDocs topDocs = searcher.search(query, MAX_DOCS);
+//		TopDocs topDocs = searcher.search(query, MAX_DOCS);
+//		ScoreDoc[] hits = topDocs.scoreDocs;
+		
+		
+		final List<Integer> docIds = new ArrayList<Integer>();
+		searcher.search(query, new Collector() {
+			   private int docBase;
+			   
+			   // ignore scorer
+			   public void setScorer(Scorer scorer) {
+			   }
 
-		ScoreDoc[] hits = topDocs.scoreDocs;
-		if(hits.length==0)
+			   // accept docs out of order (for a BitSet it doesn't matter)
+			   public boolean acceptsDocsOutOfOrder() {
+			     return true;
+			   }
+			 
+			   public void collect(int doc) {
+				   docIds.add(doc+docBase);
+			   }
+			 
+			   public void setNextReader(AtomicReaderContext context) {
+			     this.docBase = context.docBase;
+			   }
+			 });
+
+		
+		if(docIds.size()==0)
 			return;
 		else{
-			int docId = hits[0].doc;
-			final Document doc = searcher.doc(docId);
+//			int docId = hits[0].doc;
+			final Document doc = searcher.doc(docIds.get(0));
 			final int tfCorpus =  Integer.parseInt(doc.get("totalFrequency"));
 			final String freqPerYear = doc.get("freqPerYear");
 			final int tfYear = getTfOfYear(year, freqPerYear);
 			ngram.setTf_peak(tfYear);
 			ngram.setTf_corpus(tfCorpus);
+			ngram.setNr_of_years_appearance(freqPerYear.split(",").length);
 		}
 	}
 	private  int getTfOfYear(String year,String tfPerYear){
