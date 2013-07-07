@@ -19,14 +19,11 @@ package org.peakModel.java.lucene.analyzer;
 
 import java.io.IOException;
 import java.io.Reader;
-import java.util.Arrays;
-import java.util.HashSet;
 
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.core.LowerCaseFilter;
 import org.apache.lucene.analysis.core.StopAnalyzer;
 import org.apache.lucene.analysis.core.StopFilter;
-import org.apache.lucene.analysis.core.TypeTokenFilter;
 import org.apache.lucene.analysis.shingle.ShingleFilter;
 import org.apache.lucene.analysis.standard.ClassicAnalyzer;
 import org.apache.lucene.analysis.standard.ClassicTokenizer;
@@ -123,7 +120,7 @@ public final class NGramAnalyzer extends StopwordAnalyzerBase {
     stopFilter.setEnablePositionIncrements(false);
     tok = stopFilter; 
 //    tok = new LengthFilter(false, tok, 3, 25);
-    tok = new TypeTokenFilter(false, tok, new HashSet<String>(Arrays.asList( "<NUM>")));    
+//    tok = new TypeTokenFilter(false, tok, new HashSet<String>(Arrays.asList( "<NUM>")));    
     if(this.MIN_GRAM>1)
     	tok= new ShingleFilter(tok, this.MIN_GRAM,this.MAX_GRAM);    	
     

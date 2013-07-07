@@ -18,12 +18,13 @@ public class NGram {
 	private int tf_peak;
 	private int tf_corpus;
 	private String field;
-	private int nr_of_years_appearance;
+	private int nr_of_years_appearance;//in how many years appears
 	//probabilities
 	private double P_w;
 	private double P_w_Given_query_peak;
 	private double P_w_Given_time; 
 	//statistical measures
+	private double IDF_Phraseness_Informativeness;
 	private double TF_IDF;
 	private double IDF; //idf per year appearance:measures how rare is the ngram!
 	private double phraseness; //measures how likely the terms fo the ngram to appear together..can be evaluated on foreground or background corpus
@@ -58,6 +59,20 @@ public class NGram {
 	
 	
 	
+	/**
+	 * @return the iDF_Phraseness_Informativeness
+	 */
+	public double getIDF_Phraseness_Informativeness() {
+		return IDF_Phraseness_Informativeness;
+	}
+
+	/**
+	 * @param iDF_Phraseness_Informativeness the iDF_Phraseness_Informativeness to set
+	 */
+	public void setIDF_Phraseness_Informativeness(double iDF_Phraseness_Informativeness) {
+		IDF_Phraseness_Informativeness = iDF_Phraseness_Informativeness;
+	}
+
 	/**
 	 * @return the tF_IDF
 	 */
@@ -507,11 +522,11 @@ public class NGram {
 
 
 	/**
-	 * How likely the ngram appear together...
-	 * Calculate computePhraseness as below(see: A language model approach to keyphrase extraction AND Query by document; IPEIROTIS):
+	 * How likely the ngram appear together...calculate from Foregroung Corpus=> query_peak
+	 * Calculate computePhraseness  with PointwiseKL as below(see: A language model approach to keyphrase extraction AND Query by document; IPEIROTIS):
 	 * 	δ(LM_fg_bigram || LM_fg_unigram)
 	 */
-	public void computePhraseness(List<NGram> unigramList) {
+	public void computePhrasenessPKLForeground(List<NGram> unigramList) {
 		double LM_fg_unigram = 0.0;
 		String[] ngramArr = this.ngram.split(" ");
 		for(String ng:ngramArr){
@@ -523,13 +538,106 @@ public class NGram {
 		}			
 		this.phraseness = this.P_w_Given_query_peak * Helper.log2(this.P_w_Given_query_peak / LM_fg_unigram) ;	
 	}
+	
+	
+	/**
+	 * How likely the ngram appear together...calculate from Background Corpus=> Peak 
+	 * Calculate computePhraseness  with PointwiseKL as below(see: A language model approach to keyphrase extraction AND Query by document; IPEIROTIS):
+	 * 	δ(LM_bg_bigram || LM_bg_unigram)
+	 */
+	public void computePhrasenessPKLBackgroundPeak(List<NGram> unigramList) {
+		double LM_bg_unigram = 0.0;
+		String[] ngramArr = this.ngram.split(" ");
+		for(String ng:ngramArr){
+			int indexOfNgram = unigramList.indexOf(new NGram(ng,this.field));
+			if(LM_bg_unigram==0)
+				LM_bg_unigram = unigramList.get(indexOfNgram).getP_w_Given_time();
+			else
+				LM_bg_unigram *=unigramList.get(indexOfNgram).getP_w_Given_time();
+		}			
+		this.phraseness = this.P_w_Given_time * Helper.log2(this.P_w_Given_time / LM_bg_unigram) ;	
+	}
+
+	/**
+	 * How likely the ngram appear together...calculate from Background Corpus=> Corpus 
+	 * Calculate computePhraseness with PointwiseKL as below(see: A language model approach to keyphrase extraction AND Query by document; IPEIROTIS):
+	 * 	δ(LM_bg_bigram || LM_bg_unigram)
+	 */
+	public void computePhrasenessPKLBackgroundCorpus(List<NGram> unigramList) {
+		double LM_bg_unigram = 0.0;
+		String[] ngramArr = this.ngram.split(" ");
+		for(String ng:ngramArr){
+			int indexOfNgram = unigramList.indexOf(new NGram(ng,this.field));
+			if(LM_bg_unigram==0)
+				LM_bg_unigram = unigramList.get(indexOfNgram).getP_w();
+			else
+				LM_bg_unigram *=unigramList.get(indexOfNgram).getP_w();
+		}			
+		this.phraseness = this.P_w * Helper.log2(this.P_w / LM_bg_unigram) ;	
+	}
+
+	
+	/**
+	 * How likely the ngram appear together...calculate from Foregroung Corpus=> query_peak
+	 * Calculate computePhraseness  with PMI as below(see: A language model approach to keyphrase extraction AND Query by document; IPEIROTIS):
+	 * 	δ(LM_fg_bigram || LM_fg_unigram)
+	 */
+	public void computePhrasenessPMIForeground(List<NGram> unigramList) {
+		double LM_fg_unigram = 0.0;
+		String[] ngramArr = this.ngram.split(" ");
+		for(String ng:ngramArr){
+			int indexOfNgram = unigramList.indexOf(new NGram(ng,this.field));
+			if(LM_fg_unigram==0)
+				LM_fg_unigram = unigramList.get(indexOfNgram).getP_w_Given_query_peak();
+			else
+				LM_fg_unigram *=unigramList.get(indexOfNgram).getP_w_Given_query_peak();
+		}			
+		this.phraseness =  Helper.log2(this.P_w_Given_query_peak / LM_fg_unigram) ;	
+	}
+	
+	
+	/**
+	 * How likely the ngram appear together...calculate from Background Corpus=> Peak 
+	 * Calculate computePhraseness  with PMI as below(see: A language model approach to keyphrase extraction AND Query by document; IPEIROTIS):
+	 * 	δ(LM_bg_bigram || LM_bg_unigram)
+	 */
+	public void computePhrasenessPMIBackgroundPeak(List<NGram> unigramList) {
+		double LM_bg_unigram = 0.0;
+		String[] ngramArr = this.ngram.split(" ");
+		for(String ng:ngramArr){
+			int indexOfNgram = unigramList.indexOf(new NGram(ng,this.field));
+			if(LM_bg_unigram==0)
+				LM_bg_unigram = unigramList.get(indexOfNgram).getP_w_Given_time();
+			else
+				LM_bg_unigram *=unigramList.get(indexOfNgram).getP_w_Given_time();
+		}			
+		this.phraseness = Helper.log2(this.P_w_Given_time / LM_bg_unigram) ;	
+	}
+
+	/**
+	 * How likely the ngram appear together...calculate from Background Corpus=> Corpus 
+	 * Calculate computePhraseness as below(see: A language model approach to keyphrase extraction AND Query by document; IPEIROTIS):
+	 * 	δ(LM_bg_bigram || LM_bg_unigram)
+	 */
+	public void computePhrasenessPMIBackgroundCorpus(List<NGram> unigramList) {
+		double LM_bg_unigram = 0.0;
+		String[] ngramArr = this.ngram.split(" ");
+		for(String ng:ngramArr){
+			int indexOfNgram = unigramList.indexOf(new NGram(ng,this.field));
+			if(LM_bg_unigram==0)
+				LM_bg_unigram = unigramList.get(indexOfNgram).getP_w();
+			else
+				LM_bg_unigram *=unigramList.get(indexOfNgram).getP_w();
+		}			
+		this.phraseness =  Helper.log2(this.P_w / LM_bg_unigram) ;	
+	}
 
 	/**
 	 * Calculate PointwiseKL_peak as below:
 	 * 	PointwiseKL_peak(w|query,peak) => P(w|N_query_peakPeriod) * log (P(w|N_query_peakPeriod) / P(w|N_peak))
 	 */
 	public void computePointwiseKLPeak() {
-		this.PointwiseKL_peak = this.phraseness + this.P_w_Given_query_peak * Helper.log2(this.P_w_Given_query_peak / this.P_w_Given_time) ;		
+		this.PointwiseKL_peak = this.P_w_Given_query_peak * Helper.log2(this.P_w_Given_query_peak / this.P_w_Given_time) ;		
 	}
 
 
@@ -538,7 +646,7 @@ public class NGram {
 	 * 	PointwiseKL_corpus(w|query,peak) => P(w|N_query_peakPeriod) * log (P(w|N_query_peakPeriod) / P(w|N_corpus))
 	 */
 	public void computePointwiseKLCorpus() {
-		this.PointwiseKL_corpus = this.phraseness + this.P_w_Given_query_peak * Helper.log2(this.P_w_Given_query_peak / this.P_w) ;
+		this.PointwiseKL_corpus =  this.P_w_Given_query_peak * Helper.log2(this.P_w_Given_query_peak / this.P_w) ;
 	}
 
 	
@@ -600,13 +708,24 @@ public class NGram {
 	
 	
 	/**
-	 * Calculate TF-IDF per year
+	 * Calculate TF-IDF per year => tf/max_tf * idf_2
 	 */
-	public void computeTF_IDF(long N_years) {
+	public void computeTF_IDF(long N_years,long maxTF_query_peak) {
 		this.IDF = Helper.log2( (double) N_years / this.nr_of_years_appearance);
-		this.TF_IDF = this.tf_query_peak * this.IDF;		
+		double tf = (double) this.tf_query_peak / maxTF_query_peak;
+		this.TF_IDF = tf * Math.pow(this.IDF, 2);		
 	}
 
+	
+	/**
+	 * Calculate My Approach
+	 * TODO  tf_query_peak/max tf_query_peak
+	 */
+	public void computeIDF_Phraseness_Informativeness() {
+		this.IDF_Phraseness_Informativeness = this.tf_query_peak * (this.IDF * this.phraseness * this.PointwiseKL_corpus);		
+	}
+	
+	
 	
 	//========================================================  END PROBABILITIES ======================================================================
 	
@@ -629,7 +748,11 @@ public class NGram {
 	 * @see java.lang.Object#toString()
 	 */
 	public String toStringCompact() {
-		return ngram + "(" + tf_query_peak + "," + tf_peak  + "," + tf_corpus + ",nr_of_years_appearance: "+ this.nr_of_years_appearance+ "\ttf_idf:"+this.TF_IDF+")";
+		return ngram + "(" + tf_query_peak + "," + tf_peak  + "," + tf_corpus + ",nr_of_years_appearance: "+ this.nr_of_years_appearance+")";
+	}
+
+	public String toStringIDF() {
+		return ngram + "("+ this.tf_query_peak + "," + this.nr_of_years_appearance+")";
 	}
 
 
@@ -638,9 +761,27 @@ public class NGram {
 	 */
 	@Override
 	public String toString() {
-		return ngram + "," + tf_query_peak + "," + tf_peak + "," + tf_corpus + "," + field + "," + P_w + "," + P_w_Given_query_peak	+ "," + P_w_Given_time + ","
-				+ PMI_corpus + "," + PMI_peak + ","	+ PMI_peak_times_tf_query_peak	+ "," + PMI_corpus_times_tf_query_peak + ","
-				+ LOG_Likelyhood_corpus + "," + LOG_Likelyhood_peak ;
+		return "NGram [ngram=" + ngram + ", tf_query_peak=" + tf_query_peak
+				+ ", tf_peak=" + tf_peak + ", tf_corpus=" + tf_corpus
+				+ ", field=" + field + ", nr_of_years_appearance="
+				+ nr_of_years_appearance + ", P_w=" + P_w
+				+ ", P_w_Given_query_peak=" + P_w_Given_query_peak
+				+ ", P_w_Given_time=" + P_w_Given_time
+				+ ", IDF_Phraseness_Informativeness="
+				+ IDF_Phraseness_Informativeness + ", TF_IDF=" + TF_IDF
+				+ ", IDF=" + IDF + ", phraseness=" + phraseness
+				+ ", PMI_corpus=" + PMI_corpus + ", PMI_peak=" + PMI_peak
+				+ ", PMI_peak_times_tf_query_peak="
+				+ PMI_peak_times_tf_query_peak
+				+ ", PMI_corpus_times_tf_query_peak="
+				+ PMI_corpus_times_tf_query_peak + ", LOG_Likelyhood_corpus="
+				+ LOG_Likelyhood_corpus + ", LOG_Likelyhood_peak="
+				+ LOG_Likelyhood_peak + ", PointwiseKL_corpus="
+				+ PointwiseKL_corpus + ", PointwiseKL_peak=" + PointwiseKL_peak
+				+ ", PointwiseKL_peak_corpus=" + PointwiseKL_peak_corpus
+				+ ", DicePeak=" + DicePeak + ", DiceCorpus=" + DiceCorpus
+				+ ", PhiSquarePeak=" + PhiSquarePeak + ", PhiSquareCorpus="
+				+ PhiSquareCorpus + "]";
 	}
 
 	/* (non-Javadoc)
@@ -922,6 +1063,41 @@ public class NGram {
              if(o2.IDF > o1.IDF )
              	return 1;
              else if(o2.IDF < o1.IDF )
+             	return 0;
+             if(o2.tf_query_peak > o1.tf_query_peak )
+              	return 1;
+              else if(o2.tf_query_peak < o1.tf_query_peak )
+              	return 0;
+             else 
+             	return 0;
+         }
+    };
+
+    /**
+     * SORT BY Phraseness
+     */
+    public static Comparator<NGram> COMPARATOR_PHRASENESS = new Comparator<NGram>()
+    {
+    	 public int compare(NGram o1, NGram o2){
+             if(o2.phraseness > o1.phraseness )
+             	return 1;
+             else if(o2.phraseness < o1.phraseness )
+             	return 0;
+             else 
+             	return 0;
+         }
+    };
+
+    
+    /**
+     * SORT BY IDF_Phraseness_Informativeness
+     */
+    public static Comparator<NGram> COMPARATOR_IDF_Phraseness_Informativeness = new Comparator<NGram>()
+    {
+    	 public int compare(NGram o1, NGram o2){
+             if(o2.IDF_Phraseness_Informativeness > o1.IDF_Phraseness_Informativeness )
+             	return 1;
+             else if(o2.IDF_Phraseness_Informativeness < o1.IDF_Phraseness_Informativeness )
              	return 0;
              else 
              	return 0;

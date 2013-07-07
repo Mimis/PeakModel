@@ -19,13 +19,22 @@ import org.peakModel.java.peakModel.NGram;
 
 public class Helper {
 	
+	public static long getMaxTF_query_peak(List<NGram> ngramList){
+		long max = 0;
+        for(NGram ngram:ngramList){
+        	if(max < ngram.getTf_query_peak())
+        		max = ngram.getTf_query_peak();
+        }
+        return max;
+	}
+	
 	public static void writeNgramToCsv(List<NGram> ngramList, String experimentsFile) throws IOException{
 		if(ngramList.isEmpty())
 			return;
-		String csvExpnationOutput = "ngram (tf_query_peak, tf_peak, tf_corpus)";
-        Helper.writeLineToFile(experimentsFile,csvExpnationOutput, false,true);
+		String csvExpnationOutput = "";
+        Helper.writeLineToFile(experimentsFile,csvExpnationOutput, false,false);
         for(NGram ngram:ngramList){
-        	String ngramToString = ngram.toStringCompact();
+        	String ngramToString = ngram.toStringIDF();
         	Helper.writeLineToFile(experimentsFile, ngramToString, true, true);
         }
 	}
@@ -53,6 +62,32 @@ public class Helper {
             }
           }
         } while (running > 0);
+	}
+
+	public static List<NGram> keepNoStopWordsFromList(List<NGram> tokenList,List<String> stopWords ){
+		List<NGram> tokenNoStopWordsList = new ArrayList<NGram>();
+		for(NGram ngram:tokenList){
+			String token = ngram.getNgram();
+			if(token.contains(" ")){
+				String[] tokensArray = token.split(" ");
+				if(!stopWords.contains(tokensArray[0]) || !stopWords.contains(tokensArray[1]))
+					tokenNoStopWordsList.add(ngram);
+			}else{
+				if(!stopWords.contains(token))
+					tokenNoStopWordsList.add(ngram);
+			}
+		}
+		return tokenNoStopWordsList;
+	}
+
+	public static List<NGram> keepNoNgramNumbersFromList(List<NGram> tokenList){
+		List<NGram> tokenNoNgramNumbersList = new ArrayList<NGram>();
+		for(NGram ngram:tokenList){
+			String token = ngram.getNgram();
+			if(!token.matches("(\\d\\s{0,1})+"))
+				tokenNoNgramNumbersList.add(ngram);
+		}
+		return tokenNoNgramNumbersList;
 	}
 
 	
