@@ -37,7 +37,7 @@ public class NGramIndexSearch implements Runnable {
 			int counter=0;
 			for (NGram ngram : this.ngramList){
 				getNgramTotalTfAndTFperYear(ngram, year,queryParser, searcher, MAX_DOCS);
-				if(counter++ %100 ==0 )
+				if(counter++ %1000 ==0 )
 					System.out.println("Thread:"+counter);
 			}
 		} catch (ParseException e) {

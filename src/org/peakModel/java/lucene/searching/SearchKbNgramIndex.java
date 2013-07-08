@@ -28,17 +28,6 @@ public class SearchKbNgramIndex {
 	 * @throws ParseException 
 	 */
 	public static void main(String[] args) throws IOException, ParseException {
-		int a=319;
-		int d=7347;
-		long b = 35779420983L;
-		double c = (double) a/b;
-		double e = (double) d/b;
-		double y = (double) 222/22386384356L;
-		double x= c * e;
-		double f = Helper.log2(y/x);
-		System.out.println(f);
-		
-		
 		
 		int MAX_DOCS = 10000;
         Analyzer analyzer = new KeywordAnalyzer();
@@ -51,7 +40,7 @@ public class SearchKbNgramIndex {
         DirectoryReader reader = DirectoryReader.open(indexDir);
         IndexSearcher searcher = new IndexSearcher(reader);
 
-        String ngramText = "cariing?o'k";
+        String ngramText = "vraagt?lening";
 		Query query = queryParser.parse(ngramText);
 		final List<Integer> docIds = new ArrayList<Integer>();
 		searcher.search(query, new Collector() {

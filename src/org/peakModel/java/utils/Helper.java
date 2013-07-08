@@ -18,6 +18,116 @@ import org.apache.lucene.util.Version;
 import org.peakModel.java.peakModel.NGram;
 
 public class Helper {
+	/**
+	 * Group NGrams with a stop word by sum up their frequencies
+	 * @param ngramList
+	 * @param field
+	 * @param stopWords
+	 * @return List<NGram> of prunned ngram list
+	 */
+	public static List<NGram> NGramPruning(List<NGram> ngramList,String field,List<String> stopWords){
+		List<NGram> ngramPruningList = new ArrayList<NGram>();
+		List<NGram> ngramFinalList = new ArrayList<NGram>();
+
+		for(NGram ngram:ngramList){
+			String ngramString = ngram.getNgram();
+			
+			//its a BIGRAM
+			if(ngramString.contains(" ")){
+				String[] ngramArray = ngramString.split(" ");
+				int indexOfStopWord = -1;
+				int indexOfWord = -1;
+				if(stopWords.contains(ngramArray[0]) && stopWords.contains(ngramArray[1])){
+					indexOfStopWord=-10;
+				}
+				else if(stopWords.contains(ngramArray[0])){
+					indexOfStopWord = 0;
+					indexOfWord = 1;
+				}
+				else if(stopWords.contains(ngramArray[1])){
+					indexOfStopWord = 1;
+					indexOfWord = 0;
+				}
+				
+				//got stop word so prun it
+				if(indexOfStopWord != -1){
+					String ngramReplaceString = null;
+					if(indexOfStopWord != -10)
+						ngramReplaceString = ngramArray[indexOfWord];
+					else
+						ngramReplaceString = "_";
+						                                
+					NGram tempNgram = new NGram(ngramReplaceString + " _",field);
+					int indexOfpruningNgram = ngramPruningList.indexOf(tempNgram);
+					//we have seen it before
+					if(indexOfpruningNgram != -1){
+						NGram pruningNgram = ngramPruningList.get(indexOfpruningNgram);
+						SumUpFreq(pruningNgram, ngram);
+					}
+					//its a new prunnign ngram
+					else{
+						initializeFreq(tempNgram, ngram);
+						ngramPruningList.add(tempNgram);
+					}
+				}
+				//got no stop words;dont prun it
+				else{
+					ngramFinalList.add(ngram);
+				}
+			}
+			//its a UNIGRAM
+			else{
+				if(stopWords.contains(ngramString)){
+					NGram tempNgram = new NGram("_",field);
+					int indexOfpruningNgram = ngramPruningList.indexOf(tempNgram);
+					if(indexOfpruningNgram != -1){
+						NGram pruningNgram = ngramPruningList.get(indexOfpruningNgram);
+						SumUpFreq(pruningNgram, ngram);
+					}
+					//its a new prunnign ngram
+					else{
+						initializeFreq(tempNgram, ngram);
+						ngramPruningList.add(tempNgram);
+					}
+				}
+				else
+					ngramFinalList.add(ngram);
+			}
+		}
+		//add the prunning ngrams to pruned list
+		for(NGram n:ngramPruningList){
+			ngramFinalList.add(n);
+		}
+		return ngramFinalList;
+	}
+	private static void SumUpFreq(NGram a,NGram b){
+		a.setTf_query_peak(a.getTf_query_peak() + b.getTf_query_peak());
+		a.setTf_peak(a.getTf_peak() + b.getTf_peak());
+		a.setTf_corpus(a.getTf_corpus() + b.getTf_corpus());						
+		a.setNr_of_years_appearance(a.getNr_of_years_appearance() > b.getNr_of_years_appearance() ? a.getNr_of_years_appearance() : b.getNr_of_years_appearance());
+	}
+	
+	private static void initializeFreq(NGram a,NGram b){
+		a.setTf_query_peak(b.getTf_query_peak());
+		a.setTf_peak(b.getTf_peak());
+		a.setTf_corpus(b.getTf_corpus());
+		a.setNr_of_years_appearance(b.getNr_of_years_appearance());
+	}
+
+	
+	public static long removeNgramsWithNoOccurenceInNGramIndex(List<NGram> ngramList,List<NGram> finalNGramList){
+		long N_query_peakPeriod=0;
+        for(NGram ngram:ngramList){
+        	if(ngram.getTf_corpus() != 0 && ngram.getTf_peak() != 0){
+        		finalNGramList.add(ngram);
+            	N_query_peakPeriod += ngram.getTf_query_peak();
+        	}
+        	else
+        		System.out.println(ngram.getNgram());
+        }
+        return N_query_peakPeriod;
+	}
+
 	
 	public static long getMaxTF_query_peak(List<NGram> ngramList){
 		long max = 0;
