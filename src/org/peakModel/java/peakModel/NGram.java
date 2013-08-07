@@ -3,6 +3,7 @@ package org.peakModel.java.peakModel;
 import java.util.Comparator;
 import java.util.List;
 
+import org.peakModel.java.peakModel.burstiness.Burst;
 import org.peakModel.java.utils.Helper;
 
 
@@ -19,12 +20,16 @@ public class NGram {
 	private int tf_corpus;
 	private String field;
 	private int nr_of_years_appearance;//in how many years appears
+	//burstiness
+	private double burstiness;
+	private List<Burst> burstList;
+
 	//probabilities
 	private double P_w;
 	private double P_w_Given_query_peak;
 	private double P_w_Given_time; 
 	//statistical measures
-	private double IDF_Phraseness_Informativeness;
+	private double MY_APPROACH;
 	private double TF_IDF;
 	private double IDF; //idf per year appearance:measures how rare is the ngram!
 	private double phraseness; //measures how likely the terms fo the ngram to appear together..can be evaluated on foreground or background corpus
@@ -56,21 +61,64 @@ public class NGram {
 		this.tf_query_peak += 1;
 	}
 
-	
-	
-	
-	/**
-	 * @return the iDF_Phraseness_Informativeness
-	 */
-	public double getIDF_Phraseness_Informativeness() {
-		return IDF_Phraseness_Informativeness;
+	public boolean isBurstyOnGivenYear(int year){
+		for(Burst burst : this.burstList){
+			if(burst.getYearList().contains(year))
+				return true;
+		}
+		return false;
+	}
+
+	public boolean isBurstyOnlyOnGivenYear(int year){
+		if(this.burstList.size() != 1)
+			return false;
+		for(Burst burst : this.burstList){
+			if(burst.getYearList().contains(year))
+				return true;
+		}
+		return false;
 	}
 
 	/**
-	 * @param iDF_Phraseness_Informativeness the iDF_Phraseness_Informativeness to set
+	 * @return the burstList
 	 */
-	public void setIDF_Phraseness_Informativeness(double iDF_Phraseness_Informativeness) {
-		IDF_Phraseness_Informativeness = iDF_Phraseness_Informativeness;
+	public List<Burst> getBurstList() {
+		return burstList;
+	}
+
+	/**
+	 * @param burstList the burstList to set
+	 */
+	public void setBurstList(List<Burst> burstList) {
+		this.burstList = burstList;
+	}
+
+	/**
+	 * @return the burstiness
+	 */
+	public double getBurstiness() {
+		return burstiness;
+	}
+
+	/**
+	 * @param burstiness the burstiness to set
+	 */
+	public void setBurstiness(double burstiness) {
+		this.burstiness = burstiness;
+	}
+
+	/**
+	 * @return the mY_APPROACH
+	 */
+	public double getMY_APPROACH() {
+		return MY_APPROACH;
+	}
+
+	/**
+	 * @param mY_APPROACH the mY_APPROACH to set
+	 */
+	public void setMY_APPROACH(double mY_APPROACH) {
+		MY_APPROACH = mY_APPROACH;
 	}
 
 	/**
@@ -719,10 +767,10 @@ public class NGram {
 	
 	/**
 	 * Calculate My Approach
-	 * TODO  tf_query_peak/max tf_query_peak
+	 * 
 	 */
-	public void computeIDF_Phraseness_Informativeness() {
-		this.IDF_Phraseness_Informativeness = this.tf_query_peak * (this.IDF * this.phraseness * this.PointwiseKL_corpus);		
+	public void computeMY_APPROACH() {
+		this.MY_APPROACH = this.TF_IDF * this.LOG_Likelyhood_corpus;		
 	}
 	
 	
@@ -751,8 +799,8 @@ public class NGram {
 		return ngram + "(" + tf_query_peak + "," + tf_peak  + "," + tf_corpus + ",nr_of_years_appearance: "+ this.nr_of_years_appearance+")";
 	}
 
-	public String toStringIDF() {
-		return ngram + "("+ this.tf_query_peak + "," + this.nr_of_years_appearance+")";
+	public String toStringBurstiness() {
+		return ngram + "(tf:"+ this.tf_query_peak + ",tf_peak:"+this.tf_peak+",nr_years:" + this.nr_of_years_appearance +  "\tBurstiness:" + this.burstList.toString() + ")";
 	}
 
 
@@ -761,28 +809,32 @@ public class NGram {
 	 */
 	@Override
 	public String toString() {
-		return "NGram [ngram=" + ngram + ", tf_query_peak=" + tf_query_peak
-				+ ", tf_peak=" + tf_peak + ", tf_corpus=" + tf_corpus
-				+ ", field=" + field + ", nr_of_years_appearance="
-				+ nr_of_years_appearance + ", P_w=" + P_w
-				+ ", P_w_Given_query_peak=" + P_w_Given_query_peak
-				+ ", P_w_Given_time=" + P_w_Given_time
-				+ ", IDF_Phraseness_Informativeness="
-				+ IDF_Phraseness_Informativeness + ", TF_IDF=" + TF_IDF
-				+ ", IDF=" + IDF + ", phraseness=" + phraseness
-				+ ", PMI_corpus=" + PMI_corpus + ", PMI_peak=" + PMI_peak
-				+ ", PMI_peak_times_tf_query_peak="
-				+ PMI_peak_times_tf_query_peak
-				+ ", PMI_corpus_times_tf_query_peak="
-				+ PMI_corpus_times_tf_query_peak + ", LOG_Likelyhood_corpus="
-				+ LOG_Likelyhood_corpus + ", LOG_Likelyhood_peak="
-				+ LOG_Likelyhood_peak + ", PointwiseKL_corpus="
-				+ PointwiseKL_corpus + ", PointwiseKL_peak=" + PointwiseKL_peak
-				+ ", PointwiseKL_peak_corpus=" + PointwiseKL_peak_corpus
-				+ ", DicePeak=" + DicePeak + ", DiceCorpus=" + DiceCorpus
-				+ ", PhiSquarePeak=" + PhiSquarePeak + ", PhiSquareCorpus="
-				+ PhiSquareCorpus + "]";
+		return "NGram [ngram=" + ngram + "]";
 	}
+
+//	public String toString() {
+//		return "NGram [ngram=" + ngram + ", tf_query_peak=" + tf_query_peak
+//				+ ", tf_peak=" + tf_peak + ", tf_corpus=" + tf_corpus
+//				+ ", field=" + field + ", nr_of_years_appearance="
+//				+ nr_of_years_appearance + ", P_w=" + P_w
+//				+ ", P_w_Given_query_peak=" + P_w_Given_query_peak
+//				+ ", P_w_Given_time=" + P_w_Given_time
+//				+ ", IDF_Phraseness_Informativeness="
+//				+ IDF_Phraseness_Informativeness + ", TF_IDF=" + TF_IDF
+//				+ ", IDF=" + IDF + ", phraseness=" + phraseness
+//				+ ", PMI_corpus=" + PMI_corpus + ", PMI_peak=" + PMI_peak
+//				+ ", PMI_peak_times_tf_query_peak="
+//				+ PMI_peak_times_tf_query_peak
+//				+ ", PMI_corpus_times_tf_query_peak="
+//				+ PMI_corpus_times_tf_query_peak + ", LOG_Likelyhood_corpus="
+//				+ LOG_Likelyhood_corpus + ", LOG_Likelyhood_peak="
+//				+ LOG_Likelyhood_peak + ", PointwiseKL_corpus="
+//				+ PointwiseKL_corpus + ", PointwiseKL_peak=" + PointwiseKL_peak
+//				+ ", PointwiseKL_peak_corpus=" + PointwiseKL_peak_corpus
+//				+ ", DicePeak=" + DicePeak + ", DiceCorpus=" + DiceCorpus
+//				+ ", PhiSquarePeak=" + PhiSquarePeak + ", PhiSquareCorpus="
+//				+ PhiSquareCorpus + "]";
+//	}
 
 	/* (non-Javadoc)
 	 * @see java.lang.Object#hashCode()
@@ -832,6 +884,24 @@ public class NGram {
 	
 	
 	//***** COMPARATORS sorting*****//
+	
+	/**
+	 * Sort by Burstiness
+	 */
+	public static Comparator<NGram> COMPARATOR_BURSTINESS = new Comparator<NGram>()
+    {
+        public int compare(NGram o1, NGram o2){
+            if(o2.burstiness > o1.burstiness )
+            	return 1;
+            else if(o2.burstiness < o1.burstiness )
+            	return 0;
+            else 
+            	return 0;
+        }
+    };
+
+
+	
 	/**
 	 * Sort by Total Term Frequency in the result documents
 	 */
@@ -1090,14 +1160,14 @@ public class NGram {
 
     
     /**
-     * SORT BY IDF_Phraseness_Informativeness
+     * SORT BY MY_APPROACH
      */
-    public static Comparator<NGram> COMPARATOR_IDF_Phraseness_Informativeness = new Comparator<NGram>()
+    public static Comparator<NGram> COMPARATOR_MY_APPROACH = new Comparator<NGram>()
     {
     	 public int compare(NGram o1, NGram o2){
-             if(o2.IDF_Phraseness_Informativeness > o1.IDF_Phraseness_Informativeness )
+             if(o2.MY_APPROACH > o1.MY_APPROACH )
              	return 1;
-             else if(o2.IDF_Phraseness_Informativeness < o1.IDF_Phraseness_Informativeness )
+             else if(o2.MY_APPROACH < o1.MY_APPROACH )
              	return 0;
              else 
              	return 0;

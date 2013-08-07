@@ -3,8 +3,34 @@ package org.peakModel.java.peakModel;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class PeakModelWithDocumentSimilarity {
+	
+	public static double[][] computeSimMatrix(List<KbDocument> documentList,int topNgrams){
+		int nrOfDocs = documentList.size();
+		double[][] distances = new double[nrOfDocs][nrOfDocs];
+		for(int i=0;i<nrOfDocs;i++){
+			Set<NGram> ngramHitsList1 = documentList.get(i).getNgramHitsList();
+			for(int y=0;y<nrOfDocs;y++){
+				Set<NGram> ngramHitsList2 = documentList.get(y).getNgramHitsList();
+				int hits = getNrOfEqualNGramsInGivenLists(ngramHitsList1, ngramHitsList2);
+				distances[i][y] = (double) hits / topNgrams;
+//				System.out.println(distances[i][y]+"\t"+ngramHitsList1.toString()+"\t"+ngramHitsList2.toString());
+			}
+		}
+		return distances;
+	}
+	
+	private static int getNrOfEqualNGramsInGivenLists(Set<NGram> ngramHitsList1,Set<NGram> ngramHitsList2){
+		int countHits = 0;
+		for(NGram ngram:ngramHitsList1){
+			if(ngramHitsList2.contains(ngram))
+				countHits++;
+		}
+		return countHits;
+	}
+	
 
 	/**
 	 * Calculate for each doc the cosine sim with the peak model and sort the array by this score

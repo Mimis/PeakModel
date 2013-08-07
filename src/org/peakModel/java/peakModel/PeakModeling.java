@@ -4,7 +4,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.core.KeywordAnalyzer;
@@ -37,17 +40,17 @@ public class PeakModeling {
 		//========================================================== Input Parameters ==========================================================//
 		String query = "\""+ args[0] + "\"";
 		String initialQuery = args[0];
-		String date = args[1];//year
-		if(!date.equals("null"))
+		String date = args[1].equals("null") ? null : args[1] ;//year
+		if(date != null)
 			query = query + " AND date:["+date+"-01-01 TO "+date+"-12-30]";
 		boolean useForSearchOnlyTitle = Boolean.parseBoolean(args[2]);
 		boolean useStopWords = Boolean.parseBoolean(args[3]);
 		final int minN = Integer.parseInt(args[4]);
 		final int maxN = Integer.parseInt(args[5]);
 		final int NUMBER_THREADS = Integer.parseInt(args[6]);
-		int topNgramsForConsideration = 10;//for cosine similarity
+		int topNgramsForConsideration = 20;//for cosine similarity
 		final int MAX_DOCS = 30000;
-		
+		final int MAX_TITLE_LENGTH = 100;
 		/*
 		 * Variables
 		 */
@@ -127,23 +130,34 @@ public class PeakModeling {
 		 * 		N_peak_period
 		 * 		N_corpus(Year:TotalWords)
 		 */
-        if(minN==1){
-			Helper.getPeakPeriodIndex(fileWithTotalTFperYearUnigram, peakPeriodMap);
-			N_peak = peakPeriodMap.get(date);//TODO this may return null pointer exception
-			N_corpus = peakPeriodMap.get("TotalWords");
-	        indexNgramDir = HelperLucene.getIndexDir(indexKbUnigramFileName);
-	        ngramIndexReader = DirectoryReader.open(indexNgramDir);
-	        nGramSearcher = new IndexSearcher(ngramIndexReader);
-	        N_years = peakPeriodMap.size() - 1;
-        }else{
-        	Helper.getPeakPeriodIndex(fileWithTotalTFperYearBigram, peakPeriodMap);
-			N_peak = peakPeriodMap.get(date);//TODO this may return null pointer exception
-			N_corpus = peakPeriodMap.get("TotalWords");
-	        indexNgramDir = HelperLucene.getIndexDir(indexKbBigramFileName);
-	        ngramIndexReader = DirectoryReader.open(indexNgramDir);
-	        nGramSearcher = new IndexSearcher(ngramIndexReader);
-	        N_years = peakPeriodMap.size() - 1 ;
-        }
+        if(date != null){
+	        if(minN==1){
+				Helper.getPeakPeriodIndex(fileWithTotalTFperYearUnigram, peakPeriodMap);
+				N_peak = peakPeriodMap.get(date);//TODO this may return null pointer exception
+				N_corpus = peakPeriodMap.get("TotalWords");
+//				N_corpus = PeakModeling.totalFrequencies(fileWithTotalTFperYearUnigram, peakPeriodMap);
+
+		        indexNgramDir = HelperLucene.getIndexDir(indexKbUnigramFileName);
+		        ngramIndexReader = DirectoryReader.open(indexNgramDir);
+		        nGramSearcher = new IndexSearcher(ngramIndexReader);
+		        N_years = peakPeriodMap.size() - 1;
+	        }else{
+	        	Helper.getPeakPeriodIndex(fileWithTotalTFperYearBigram, peakPeriodMap);
+				N_peak = peakPeriodMap.get(date);//TODO this may return null pointer exception
+				N_corpus = peakPeriodMap.get("TotalWords");
+//				N_corpus = PeakModeling.totalFrequencies(fileWithTotalTFperYearBigram, peakPeriodMap);
+
+		        indexNgramDir = HelperLucene.getIndexDir(indexKbBigramFileName);
+		        ngramIndexReader = DirectoryReader.open(indexNgramDir);
+		        nGramSearcher = new IndexSearcher(ngramIndexReader);
+		        N_years = peakPeriodMap.size() - 1 ;
+	        }
+        }        
+        
+        
+        
+        
+        
         
         
                 
@@ -168,9 +182,14 @@ public class PeakModeling {
 				 * Title
 				 */
 				final String title = doc.get("title");				
-				//System.out.println(title+"\t"+doc.get("url"));
-				List<String> tokenList = HelperLucene.tokenizeString(NgramAnalyzerForTokenization, title);
+				final String docDate = doc.get("date");
+				final String url = doc.get("url");				
+//				System.out.println(docDate+"\t"+title+"\tScore:"+hits[i].score);
 				
+				List<String> tokenList = HelperLucene.tokenizeString(NgramAnalyzerForTokenization, title);
+				if(tokenList.size() > MAX_TITLE_LENGTH){
+					continue;
+				}
 				if(minN == 2){
 					//this is for phraseness
 					List<String> unigramTokenList = Helper.keepOnlyUnigramsFromList(tokenList);				
@@ -178,24 +197,47 @@ public class PeakModeling {
 					//this the candidate keyphrases
 					tokenList = Helper.keepOnlyBigramsFromList(tokenList);				
 				}
-				documentList.add(new KbDocument(docId, title,tokenList));
+				documentList.add(new KbDocument(docId, title,tokenList,docDate,url,hits[i].score));
 				Helper.mapTokenListToNGramList(tokenList, "title", ngramList);
 			}
         }
 	
         
+        
+        
+        
+        
+        
+        
+        
+        
         /**
          * FILTER OUT CANDIDATES!
          * 	1. ngrams with only stop words
-         *  2. TODO ngram with the Query Keyword and a function word
+         *  2. ngram with the Query Keyword and a function word
          *  3. ngram with only numbers
-         *  4. TODO ngram with only numbers and function words
+         *  4. ngram with only numbers and function words
+         *  5. ngram with only a word and a stop word
+         *  6. ngrams with char length less than N
+         *  7. TODO hard rule for removing the journalist name("door Capitalizex2" || "onze verslaggever*")
+         *  8. Singleton ngrams; tf_query_peak==1 TODO we need to take in account the frequency after Ngram prunning!!! i.e. lockheed by(1) , lockheed to(1) = lockheed _(2)
+         *  										   or the frequencies of the unigram that include the bigram:aka remove the ngram that got singleton unigrams
          */
-//        ngramList = Helper.keepNoStopWordsFromList(ngramList, stopWords);
-//        ngramList = Helper.keepNoNgramNumbersFromList(ngramList);
+        			System.out.println("before filtering:"+ngramList.size());
+        ngramList = Helper.keepNoStopWordsFromList(ngramList, stopWords);
+        ngramList = Helper.skipNgramWithQueryAndStopWord(ngramList, stopWords, initialQuery);
+        ngramList = Helper.keepNoNgramNumbersFromList(ngramList);
+        ngramList = Helper.skipNgramWithNumberAndStopWord(ngramList, stopWords);
+        ngramList = Helper.keepNoCominationWithStopWordsFromList(ngramList, stopWords);
+//        ngramList = Helper.skipSmallLengthNgram(ngramList);
+//        ngramList = Helper.skipSingletonNgram(ngramList);
+//        ngramList = Helper.skipSingletonNgramWithSingletonUnigrams(ngramList, unigramList, "title");
+        			System.out.println("after filtering:"+ngramList.size());
         
         
-        
+        			
+        			
+        			
         
         /**
          * GET N-GRAM FREQUENCIES: 
@@ -205,7 +247,7 @@ public class PeakModeling {
          */
 	    System.out.println("#ngramList before removing empty:"+ ngramList.size());		
 	    //PeakModeling.NgramSearchLinearProcessing(ngramList, nGramSearcher, date, 1);       	//linear processing
-    	PeakModeling.NgramSearchMultiThread(ngramList, NUMBER_THREADS, date, nGramSearcher, 1); //multihreading
+    	PeakModeling.NgramSearchMultiThread(ngramList, NUMBER_THREADS, date, nGramSearcher, 1,N_corpus,N_peak); //multihreading
         /*
          * remove ngrams that dont exist in NGram index AND	Calculate:
          * 		 N_query_peakPeriod
@@ -216,12 +258,17 @@ public class PeakModeling {
 
 	    
 	    
+	    
+	    
+	    
+	    
+	    
 	    /**
 	     * N-Gram Prunning: 
 	     * 		
 	     */
-	    finalNGramList = Helper.NGramPruning(finalNGramList, "title", stopWords);
-	    unigramList = Helper.NGramPruning(unigramList, "title", stopWords);
+//	    finalNGramList = Helper.NGramPruning(finalNGramList, "title", stopWords);
+//	    unigramList = Helper.NGramPruning(unigramList, "title", stopWords);
 	    
 	    
 	    
@@ -229,6 +276,10 @@ public class PeakModeling {
 		 * find maximum frequency in the foreground corpus ; We use it for TF-IDF score
 		 */
 	    maxTF_query_peak = Helper.getMaxTF_query_peak(finalNGramList);
+	    
+	    
+	    
+	    
 	    
 	    
         /**
@@ -240,7 +291,12 @@ public class PeakModeling {
 	    computePhrasenessOnlyForeground(unigramList, minN);
 	    
 	    
-        /*
+	    
+	    
+	    
+	    
+	    
+        /**
          * Compute Probabilities and Statistical Measures
          * 		P(w)_corpus
          * 		P(w)_peak
@@ -250,12 +306,37 @@ public class PeakModeling {
 		calculateProbabilitiesAndMeasures(finalNGramList, unigramList, minN, N_corpus, N_query_peakPeriod, N_peak,N_years,maxTF_query_peak);
 		
 		
-        /*
+		
+		
+		
+		
+		/**
+		 * Document Clustering based on NGRAM hits
+		 * Assign to each doc the ngram hits that include and return a list witth only docs with hits
+		 */
+		Helper.removeQueryTermsFromNgramList(initialQuery, finalNGramList);
+       	Collections.sort(finalNGramList, NGram.COMPARATOR_LOG_CORPUS);
+       	documentList = assignNgramHitsToEachDoc(finalNGramList, topNgramsForConsideration, documentList);
+       	List<Cluster> clusterList = Clustering.clusteringBasedOnNgramHits(documentList);
+       	Collections.sort(clusterList, Cluster.COMPARATOR_AVG_DOCS_SCORE);
+       	
+//       	for(Cluster cl : clusterList){
+//       		System.out.println("\n"+cl.getAvgDocScore()+"\t"+cl.getNgramHits().toString());
+//       		for(KbDocument kb:cl.getKbDocList())
+//       			System.out.println("\t"+kb.getDate()+"\t"+kb.getTitle()+"\t"+kb.getScore()+"\t"+kb.getUrl());
+//       	}
+
+       	
+       	
+
+       	
+		
+        /**
          * 1.Sort NGrams By Measure
          * 2.Get top N ngrams after Remove from ngrams the initial query
          * 3.Calculate Cosine Similarity between Top NGrams and Headlines
          */
-        Helper.removeQueryTermsFromNgramList(initialQuery, finalNGramList);
+//		Helper.removeQueryTermsFromNgramList(initialQuery, finalNGramList);
         displayBestNgramsForEachMeasure(useStopWords, finalNGramList, topNgramsForConsideration, documentList, initialQuery, date, minN);
                 
         /*
@@ -268,7 +349,7 @@ public class PeakModeling {
       //==========================================================End MAIN===================================================================//
        	
        	
-       	
+        testBurstinessOutput(finalNGramList,Integer.parseInt(date));
        	
        	
        	
@@ -287,11 +368,29 @@ public class PeakModeling {
 	    System.out.println("#Total Indexing run time:"+ (endTime-startTime)/1000);
 	}
 	
+	
+	
+	public static void testBurstinessOutput(List<NGram> finalNGramList,int date){
+       	Collections.sort(finalNGramList, NGram.COMPARATOR_LOG_CORPUS);
+       	for(NGram ng:finalNGramList){
+//       		if(ng.isBurstyOnGivenYear(date))
+       			System.out.println(ng.toStringBurstiness());
+       	}
+	}
 
-	
+	public static long totalFrequencies(String fileWithTotalTFperYearNgram,HashMap<String,Long> peakPeriodMap){
+		Helper.getPeakPeriodIndex(fileWithTotalTFperYearNgram, peakPeriodMap);
+		long totalTf = 0;
+		for(Map.Entry<String,Long> entry:peakPeriodMap.entrySet()){
+			String year = entry.getKey();
+			long tf = entry.getValue();
+			if(!year.equals("17yy") && !year.equals("16yy") && !year.equals("TotalWords"))
+				totalTf += tf;
+		}
+		return totalTf;
+	}
 
-	
-	
+
 	
 	
 	/**
@@ -334,7 +433,7 @@ public class PeakModeling {
 	        DirectoryReader ngramIndexReader = DirectoryReader.open(indexNgramDir);
 	        IndexSearcher nGramSearcher = new IndexSearcher(ngramIndexReader);
 	        //long N_years = peakPeriodMap.size() - 1;
-	    	PeakModeling.NgramSearchMultiThread(unigramList, NUMBER_THREADS, date, nGramSearcher, 1);
+	    	PeakModeling.NgramSearchMultiThread(unigramList, NUMBER_THREADS, date, nGramSearcher, 1,N_corpus,N_peak);
 	    	
 			long N_unigram_peak = 0;//total number of words in peak period; THIS IS FOR PHRASENESS
 			for(NGram uni:unigramList)
@@ -388,7 +487,7 @@ public class PeakModeling {
         	ngram.computePhiSquareCorpus(N_query_peakPeriod, N_corpus);
         	ngram.computePhiSquarePeak(N_query_peakPeriod, N_peak);
         	ngram.computeTF_IDF(N_years,maxTF_query_peak);
-        	ngram.computeIDF_Phraseness_Informativeness();
+        	ngram.computeMY_APPROACH();
         }
 	}
 	
@@ -403,7 +502,7 @@ public class PeakModeling {
 	 * @param nGramSearcher
 	 * @param MAX_DOCS
 	 */
-	public static void NgramSearchMultiThread(List<NGram> ngramList, int NUMBER_THREADS,String date,IndexSearcher nGramSearcher, int MAX_DOCS){
+	public static void NgramSearchMultiThread(List<NGram> ngramList, int NUMBER_THREADS,String date,IndexSearcher nGramSearcher, int MAX_DOCS,long N_corpus,long N_peak){
 		int ngramSize = ngramList.size();
 		int ngramsPerThread = ngramSize / NUMBER_THREADS;
 	    List<Thread> threads = new ArrayList<Thread>();
@@ -414,13 +513,13 @@ public class PeakModeling {
 			toIndex = i == NUMBER_THREADS-1 ? ngramSize : toIndex;			
 			List<NGram> ngramSubList = ngramList.subList(fromIndex, toIndex);			
             QueryParser ngramIndexQueryParser = new QueryParser(Version.LUCENE_43, "ngram", new KeywordAnalyzer());
-			startWorker(ngramSubList, threads, date, ngramIndexQueryParser, nGramSearcher, MAX_DOCS);
+			startWorker(ngramSubList, threads, date, ngramIndexQueryParser, nGramSearcher, MAX_DOCS,N_corpus, N_peak);
 		}
 		System.out.println("wait for Threads to finish...");
         Helper.waitThreadsToFinish(threads);
 	}
-	public static void startWorker(List<NGram> ngramList,  List<Thread> threads,String date,QueryParser ngramIndexQueryParser,IndexSearcher nGramSearcher, int MAX_DOCS){
-    	NGramIndexSearch task = new NGramIndexSearch(ngramList, date, ngramIndexQueryParser, nGramSearcher, MAX_DOCS);
+	public static void startWorker(List<NGram> ngramList,  List<Thread> threads,String date,QueryParser ngramIndexQueryParser,IndexSearcher nGramSearcher, int MAX_DOCS,long N_corpus,long N_peak){
+    	NGramIndexSearch task = new NGramIndexSearch(ngramList, date, ngramIndexQueryParser, nGramSearcher, MAX_DOCS, N_corpus, N_peak);
         Thread worker = new Thread(task);
         worker.start();
         threads.add(worker);
@@ -440,6 +539,8 @@ public class PeakModeling {
 	 */
 	public static void displayBestNgramsForEachMeasure(boolean useStopWords, List<NGram> finalNGramList,int topNgramsForConsideration, List<KbDocument> documentList,String initialQuery,String date,int minN) throws IOException{
 		String experimentsFileTF = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+initialQuery+"_"+date+"_TF_"+minN+"gram.csv";
+		String experimentsFileBURSTINESS = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+initialQuery+"_"+date+"_BURSTINESS_"+minN+"gram.csv";
+
 		String experimentsFilePMIcorpus = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+initialQuery+"_"+date+"_PMI_corpus_"+minN+"gram.csv";
 		String experimentsFilePMIpeak = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+initialQuery+"_"+date+"_PMI_peak_"+minN+"gram.csv";
 		String experimentsFilePMIpeakTF_query_peak = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+initialQuery+"_"+date+"_PMI_TF_peak_"+minN+"gram.csv";
@@ -452,7 +553,7 @@ public class PeakModeling {
 		String experimentsFileTF_IDF = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+initialQuery+"_"+date+"_TFIDF_"+minN+"gram.csv";
 		String experimentsFileIDF = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+initialQuery+"_"+date+"_IDF_"+minN+"gram.csv";
 		String experimentsFilePHRASENESS = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+initialQuery+"_"+date+"_PHRASENESS_"+minN+"gram.csv";
-		String experimentsFileIDF_Phraseness_Informativeness = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+initialQuery+"_"+date+"_IDF_Phraseness_Informativeness_"+minN+"gram.csv";
+		String experimentsFileMY_APPROACH = "/Users/mimis/Development/EclipseProject/PeakModel/experiments/"+initialQuery+"_"+date+"_MY_APPROACH_"+minN+"gram.csv";
 		
 //		if(useStopWords){
 	       	Collections.sort(finalNGramList, NGram.COMPARATOR_TOTAL_TF);
@@ -460,6 +561,10 @@ public class PeakModeling {
 //	       	DisplayBestTitlesViaCosineSim("TF",finalNGramList, documentList, topNgramsForConsideration);
 //	       	
 //        }else{
+		
+//       	Collections.sort(finalNGramList, NGram.COMPARATOR_BURSTINESS);
+//       	Helper.writeNgramToCsv(finalNGramList, experimentsFileBURSTINESS);
+
 //	       	Collections.sort(finalNGramList, NGram.COMPARATOR_PMI_CORPUS);
 //	       	Helper.writeNgramToCsv(finalNGramList, experimentsFilePMIcorpus);
 //	       	DisplayBestTitlesViaCosineSim("PMI_CORPUS",finalNGramList, documentList, topNgramsForConsideration);
@@ -476,9 +581,9 @@ public class PeakModeling {
 //	       	Helper.writeNgramToCsv(finalNGramList, experimentsFilePMIcorpusTF_query_peak);
 //	       	DisplayBestTitlesViaCosineSim("PMI_TF_CORPUS",finalNGramList, documentList, topNgramsForConsideration);
 //
-	       	Collections.sort(finalNGramList, NGram.COMPARATOR_LOG_CORPUS);
-	       	Helper.writeNgramToCsv(finalNGramList, experimentsFileLOGcorpus);
-//	       	//DisplayBestTitlesViaCosineSim("LOG_CORPUS",finalNGramList, documentList, topNgramsForConsideration);
+//	       	Collections.sort(finalNGramList, NGram.COMPARATOR_LOG_CORPUS);
+//	       	Helper.writeNgramToCsv(finalNGramList, experimentsFileLOGcorpus);
+//	       	DisplayBestTitlesViaCosineSim("LOG_CORPUS",finalNGramList, documentList, topNgramsForConsideration);
 //
 //	       	Collections.sort(finalNGramList, NGram.COMPARATOR_LOG_PEAK);
 //	       	Helper.writeNgramToCsv(finalNGramList, experimentsFileLOGpeak);
@@ -500,8 +605,8 @@ public class PeakModeling {
 //	       	Helper.writeNgramToCsv(finalNGramList, experimentsFileTF_IDF);
 	       	//DisplayBestTitlesViaCosineSim("TF-IDF",finalNGramList, documentList, topNgramsForConsideration);
 
-	       	Collections.sort(finalNGramList, NGram.COMPARATOR_IDF);
-	       	Helper.writeNgramToCsv(finalNGramList, experimentsFileIDF);
+//	       	Collections.sort(finalNGramList, NGram.COMPARATOR_IDF);
+//	       	Helper.writeNgramToCsv(finalNGramList, experimentsFileIDF);
 	       	//DisplayBestTitlesViaCosineSim("IDF",finalNGramList, documentList, topNgramsForConsideration);
 
 //	       	Collections.sort(finalNGramList, NGram.COMPARATOR_PHRASENESS);
@@ -509,12 +614,31 @@ public class PeakModeling {
 //	       	//DisplayBestTitlesViaCosineSim("PHRASENESS",finalNGramList, documentList, topNgramsForConsideration);
 //
 //	       	
-//	       	Collections.sort(finalNGramList, NGram.COMPARATOR_IDF_Phraseness_Informativeness);
-//	       	Helper.writeNgramToCsv(finalNGramList, experimentsFileIDF_Phraseness_Informativeness);
+//	       	Collections.sort(finalNGramList, NGram.COMPARATOR_MY_APPROACH);
+//	       	Helper.writeNgramToCsv(finalNGramList, experimentsFileMY_APPROACH);
 	       	//DisplayBestTitlesViaCosineSim("PHRASENESS",finalNGramList, documentList, topNgramsForConsideration);
 
 //        }
 	}
+	
+	public static List<KbDocument> assignNgramHitsToEachDoc(List<NGram> ngramList,int topNgramsForConsideration,List<KbDocument> documentList){
+		List<KbDocument> documentWithHitsList = new ArrayList<KbDocument>();
+		List<NGram> peakModelNGramList = ngramList.subList(0, ngramList.size() > topNgramsForConsideration ? topNgramsForConsideration : ngramList.size());
+		for(KbDocument kbDoc : documentList){
+			Map<String,Integer> docNgramMap = kbDoc.getTokenMap();
+			Set<NGram> docNgramHitsList = new HashSet<NGram>();
+			for(NGram ngram:peakModelNGramList){
+				if(docNgramMap.containsKey(ngram.getNgram()))
+					docNgramHitsList.add(ngram);
+			}
+			if(!docNgramHitsList.isEmpty()){
+				kbDoc.setNgramHitsList(docNgramHitsList);
+				documentWithHitsList.add(kbDoc);
+			}	
+		}
+		return documentWithHitsList;
+	}
+	
 	
 	/**
 	 * Cosine Similarity 

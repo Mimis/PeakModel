@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.lucene.analysis.util.CharArraySet;
@@ -18,6 +19,27 @@ import org.apache.lucene.util.Version;
 import org.peakModel.java.peakModel.NGram;
 
 public class Helper {
+	
+	public static Map<Integer,Integer> importTfYearStringToMap(String tfPerYear){
+		Map<Integer,Integer> tfPerYearMap = new HashMap<Integer,Integer>();
+		String[] tfYearArr = tfPerYear.split(",");
+		for(String yearToFreq:tfYearArr){
+			String[] yearToFreqArr = yearToFreq.split(":");
+			String year = yearToFreqArr[0];
+			if(!year.equals("17yy") && !year.equals("16yy"))
+				tfPerYearMap.put(Integer.parseInt(yearToFreqArr[0]), Integer.parseInt(yearToFreqArr[1]));
+		}
+		return tfPerYearMap;
+	}
+
+	public static int getTfFromYearToTfMap(int year,Map<Integer,Integer> tfPerYearMap){
+		if(tfPerYearMap.containsKey(year))
+			return tfPerYearMap.get(year);
+		else
+			return 0;
+	}
+	
+	
 	/**
 	 * Group NGrams with a stop word by sum up their frequencies
 	 * @param ngramList
@@ -122,8 +144,6 @@ public class Helper {
         		finalNGramList.add(ngram);
             	N_query_peakPeriod += ngram.getTf_query_peak();
         	}
-        	else
-        		System.out.println(ngram.getNgram());
         }
         return N_query_peakPeriod;
 	}
@@ -144,7 +164,7 @@ public class Helper {
 		String csvExpnationOutput = "";
         Helper.writeLineToFile(experimentsFile,csvExpnationOutput, false,false);
         for(NGram ngram:ngramList){
-        	String ngramToString = ngram.toStringIDF();
+        	String ngramToString = ngram.toStringBurstiness();
         	Helper.writeLineToFile(experimentsFile, ngramToString, true, true);
         }
 	}
@@ -157,8 +177,10 @@ public class Helper {
 			queryNgrams.add(new NGram(q,"title"));
 		}
 		queryNgrams.add(new NGram(initialQuery,"title"));
-		for(NGram ng:queryNgrams)
-			ngramList.remove(ng);
+		for(NGram ng:queryNgrams){
+			boolean b = ngramList.remove(ng);
+			System.out.println(b+"\t"+ng.getNgram());
+		}
 	}
 
 	
@@ -174,6 +196,113 @@ public class Helper {
         } while (running > 0);
 	}
 
+	public static List<NGram> skipSmallLengthNgram(List<NGram> tokenList){
+		List<NGram> tokenNoStopWordsList = new ArrayList<NGram>();
+		for(NGram ngram:tokenList){
+			int length = ngram.getNgram().length();
+			if(length > 5)
+				tokenNoStopWordsList.add(ngram);
+//			else
+//				System.out.println(ngram.getNgram());
+		}
+		return tokenNoStopWordsList;
+	}
+
+	public static List<NGram> skipSingletonNgramWithSingletonUnigrams(List<NGram> bigramList,List<NGram> unigramList,String field){
+		List<NGram> tokenNoStopWordsList = new ArrayList<NGram>();
+		for(NGram ngram:bigramList){
+			String bigram = ngram.getNgram();
+			String[] tokensArray = bigram.split(" ");
+
+			if(ngram.getTf_query_peak() != 1){
+				tokenNoStopWordsList.add(ngram);				
+			}
+			else if(unigramList.get(unigramList.indexOf(new NGram(tokensArray[0],field))).getTf_query_peak() != 1  ||
+					unigramList.get(unigramList.indexOf(new NGram(tokensArray[1],field))).getTf_query_peak() != 1)
+					tokenNoStopWordsList.add(ngram);
+			
+		}
+		return tokenNoStopWordsList;
+	}
+
+	
+	public static List<NGram> skipSingletonNgram(List<NGram> tokenList){
+		List<NGram> tokenNoStopWordsList = new ArrayList<NGram>();
+		for(NGram ngram:tokenList){
+			if(ngram.getTf_query_peak() != 1)
+				tokenNoStopWordsList.add(ngram);
+			else
+				System.out.println(ngram.getNgram()+"\t"+ngram.getTf_query_peak()+"\t"+ngram.getNr_of_years_appearance());
+			
+		}
+		return tokenNoStopWordsList;
+	}
+
+	/**
+	 * 	 * Remove ngram with only numbers and function words
+	 * @param tokenList
+	 * @param stopWords
+	 * @param query
+	 * @return
+	 */
+	public static List<NGram> skipNgramWithNumberAndStopWord(List<NGram> tokenList,List<String> stopWords){
+		List<NGram> tokenNoStopWordsList = new ArrayList<NGram>();
+		for(NGram ngram:tokenList){
+			String token = ngram.getNgram();
+			if(token.contains(" ")){
+				String[] tokensArray = token.split(" ");
+				if((stopWords.contains(tokensArray[0]) && tokensArray[1].matches("\\d+"))  || (stopWords.contains(tokensArray[1]) && tokensArray[0].matches("\\d+"))){
+//					System.out.println(token);
+				}
+				else
+					tokenNoStopWordsList.add(ngram);
+			}
+		}
+		return tokenNoStopWordsList;
+	}
+
+	
+	/**
+	 * Remove ngram  with the Query Keyword and a function word
+	 * @param tokenList
+	 * @param stopWords
+	 * @return
+	 */
+	public static List<NGram> skipNgramWithQueryAndStopWord(List<NGram> tokenList,List<String> stopWords,String query ){
+		List<NGram> tokenNoStopWordsList = new ArrayList<NGram>();
+		for(NGram ngram:tokenList){
+			String token = ngram.getNgram();
+			if(token.contains(" ")){
+				String[] tokensArray = token.split(" ");
+				if((stopWords.contains(tokensArray[0]) && tokensArray[1].equals(query))  || (stopWords.contains(tokensArray[1]) && tokensArray[0].equals(query))){
+//					System.out.println(token);
+				}
+				else
+					tokenNoStopWordsList.add(ngram);
+			}
+		}
+		return tokenNoStopWordsList;
+	}
+
+
+	public static List<NGram> keepNoCominationWithStopWordsFromList(List<NGram> tokenList,List<String> stopWords ){
+		List<NGram> tokenNoStopWordsList = new ArrayList<NGram>();
+		for(NGram ngram:tokenList){
+			String token = ngram.getNgram();
+			if(token.contains(" ")){
+				String[] tokensArray = token.split(" ");
+				if(!stopWords.contains(tokensArray[0]) && !stopWords.contains(tokensArray[1]))
+					tokenNoStopWordsList.add(ngram);
+//				else
+//					System.out.println(token);
+			}else{
+				if(!stopWords.contains(token))
+					tokenNoStopWordsList.add(ngram);
+			}
+		}
+		return tokenNoStopWordsList;
+	}
+
 	public static List<NGram> keepNoStopWordsFromList(List<NGram> tokenList,List<String> stopWords ){
 		List<NGram> tokenNoStopWordsList = new ArrayList<NGram>();
 		for(NGram ngram:tokenList){
@@ -182,6 +311,8 @@ public class Helper {
 				String[] tokensArray = token.split(" ");
 				if(!stopWords.contains(tokensArray[0]) || !stopWords.contains(tokensArray[1]))
 					tokenNoStopWordsList.add(ngram);
+//				else
+//					System.out.println(token);
 			}else{
 				if(!stopWords.contains(token))
 					tokenNoStopWordsList.add(ngram);
@@ -196,6 +327,8 @@ public class Helper {
 			String token = ngram.getNgram();
 			if(!token.matches("(\\d\\s{0,1})+"))
 				tokenNoNgramNumbersList.add(ngram);
+//			else
+//				System.out.println(token);
 		}
 		return tokenNoNgramNumbersList;
 	}
