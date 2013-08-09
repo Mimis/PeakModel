@@ -112,8 +112,8 @@ public class NGramIndexSearch implements Runnable {
 			
 			//this is based on year and not by the current documents set!!!!
 //			final double burstiness = Burstiness.measureBurstinessCHI_SQUARE( tfYear, freqPerYear.split(","), N_corpus, N_peak);
-			List<Burst> burstList = Burstiness.measureBurstinessMovingAverage(freqPerYear, 2);
-			ngram.setBurstList(burstList);
+//			List<Burst> burstList = Burstiness.measureBurstinessForWholeCorpusMovingAverage(freqPerYear, 2);
+//			ngram.setBurstList(burstList);
 		}
 	}
 	private  int getTfOfYear(String year,String tfPerYear){

@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.peakModel.java.peakModel.document_process.KbDocument;
+
 public class PeakModelWithDocumentSimilarity {
 	
 	public static double[][] computeSimMatrix(List<KbDocument> documentList,int topNgrams){

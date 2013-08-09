@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -23,6 +24,12 @@ import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.Version;
 import org.peakModel.java.lucene.searching.NGramIndexSearch;
+import org.peakModel.java.peakModel.burstiness.Burst;
+import org.peakModel.java.peakModel.burstiness.Burstiness;
+import org.peakModel.java.peakModel.clustering.Cluster;
+import org.peakModel.java.peakModel.clustering.Clustering;
+import org.peakModel.java.peakModel.document_process.AssignBurstyWeightToDocument;
+import org.peakModel.java.peakModel.document_process.KbDocument;
 import org.peakModel.java.utils.Helper;
 import org.peakModel.java.utils.HelperLucene;
 
@@ -32,8 +39,9 @@ public class PeakModeling {
 	 * @param args
 	 * @throws IOException 
 	 * @throws ParseException 
+	 * @throws java.text.ParseException 
 	 */
-	public static void main(String[] args) throws IOException, ParseException {
+	public static void main(String[] args) throws IOException, ParseException, java.text.ParseException {
 		long startTime = System.currentTimeMillis();
 		
 		
@@ -42,7 +50,7 @@ public class PeakModeling {
 		String initialQuery = args[0];
 		String date = args[1].equals("null") ? null : args[1] ;//year
 		if(date != null)
-			query = query + " AND date:["+date+"-01-01 TO "+date+"-12-30]";
+			query = query + " AND date:["+date+"-01-01 TO "+date+"-12-31]";
 		boolean useForSearchOnlyTitle = Boolean.parseBoolean(args[2]);
 		boolean useStopWords = Boolean.parseBoolean(args[3]);
 		final int minN = Integer.parseInt(args[4]);
@@ -156,8 +164,8 @@ public class PeakModeling {
         
         
         
-        
-        
+        //keep the doc frew that query got durring the peak year
+        HashMap<String,Integer> queryDocFreqPerDayMap = new HashMap<String,Integer>();
         
         
                 
@@ -186,10 +194,13 @@ public class PeakModeling {
 				final String url = doc.get("url");				
 //				System.out.println(docDate+"\t"+title+"\tScore:"+hits[i].score);
 				
+				//Skip larger than N titles
 				List<String> tokenList = HelperLucene.tokenizeString(NgramAnalyzerForTokenization, title);
 				if(tokenList.size() > MAX_TITLE_LENGTH){
 					continue;
 				}
+				
+				
 				if(minN == 2){
 					//this is for phraseness
 					List<String> unigramTokenList = Helper.keepOnlyUnigramsFromList(tokenList);				
@@ -199,8 +210,39 @@ public class PeakModeling {
 				}
 				documentList.add(new KbDocument(docId, title,tokenList,docDate,url,hits[i].score));
 				Helper.mapTokenListToNGramList(tokenList, "title", ngramList);
+				
+				
+				if(queryDocFreqPerDayMap.containsKey(docDate)){
+					int cc=queryDocFreqPerDayMap.get(docDate);
+					queryDocFreqPerDayMap.put(docDate, cc+1);
+				}else
+					queryDocFreqPerDayMap.put(docDate, 1);
 			}
         }
+        StringBuilder freqPerYear= new StringBuilder();
+        long total=0;
+        for(Map.Entry<String,Integer>entry:queryDocFreqPerDayMap.entrySet()){
+//        	System.out.println(entry.getKey()+"\t"+entry.getValue());
+        	freqPerYear.append(entry.getKey()+":"+entry.getValue()+",");
+        	total+=entry.getValue();
+        }
+//        System.out.println(freqPerYear.toString());
+//		List<Burst> burstList = Burstiness.measureBurstinessMovingAverage(freqPerYear.toString(), 7);
+        LinkedHashMap<String,Double> movingAvgNormOnlyList = Burstiness.measureBurstinessForPeakYearMovingAverage(date, freqPerYear.toString(), 2);
+		for(Map.Entry<String, Double> entry:movingAvgNormOnlyList.entrySet()){
+			String d = entry.getKey();
+			double burstiness = entry.getValue();
+			String f=d+"\t";
+			if(queryDocFreqPerDayMap.containsKey(d)){
+				double a = (double)queryDocFreqPerDayMap.get(d) / total;
+				f += a+"\t"+burstiness;
+			}
+			else
+				f +=0+"\t"+burstiness;
+			
+//			System.out.println(f);
+		}
+
 	
         
         
@@ -229,6 +271,7 @@ public class PeakModeling {
         ngramList = Helper.keepNoNgramNumbersFromList(ngramList);
         ngramList = Helper.skipNgramWithNumberAndStopWord(ngramList, stopWords);
         ngramList = Helper.keepNoCominationWithStopWordsFromList(ngramList, stopWords);
+        
 //        ngramList = Helper.skipSmallLengthNgram(ngramList);
 //        ngramList = Helper.skipSingletonNgram(ngramList);
 //        ngramList = Helper.skipSingletonNgramWithSingletonUnigrams(ngramList, unigramList, "title");
@@ -260,6 +303,17 @@ public class PeakModeling {
 	    
 	    
 	    
+	    
+	    /**
+	     * Set as Bursty the Ngrams that gor burst on Peak Date
+	     * Assign ngrams that are bursty into each document
+	     */
+//	    assignBurstinesstoNgrams(finalNGramList, Integer.parseInt(date));
+//	    for(KbDocument document:documentList)
+//	    	AssignBurstyWeightToDocument.AssignBurstyWeight(finalNGramList, document);
+//	    Collections.sort(documentList, KbDocument.COMPARATOR_BURSTINESS);
+//	    for(KbDocument document:documentList)
+//	    	System.out.println("\tBurst:"+document.getNgramBurstyList().size()+"\t"+document.getTitle()+"\tScore:"+document.getScore());
 	    
 	    
 	    
@@ -327,7 +381,11 @@ public class PeakModeling {
 //       	}
 
        	
-       	
+        /*
+         * Test Burstiness
+         */
+//        testBurstinessOutput(finalNGramList,Integer.parseInt(date));
+
 
        	
 		
@@ -349,7 +407,6 @@ public class PeakModeling {
       //==========================================================End MAIN===================================================================//
        	
        	
-        testBurstinessOutput(finalNGramList,Integer.parseInt(date));
        	
        	
        	
@@ -368,6 +425,13 @@ public class PeakModeling {
 	    System.out.println("#Total Indexing run time:"+ (endTime-startTime)/1000);
 	}
 	
+	public static void assignBurstinesstoNgrams(List<NGram> finalNGramList,int date){
+       	Collections.sort(finalNGramList, NGram.COMPARATOR_LOG_CORPUS);
+       	for(NGram ng:finalNGramList){
+       		if(ng.isBurstyOnlyOnGivenYear(date))
+       			ng.setBurstyOnPeakDate(true);
+       	}
+	}
 	
 	
 	public static void testBurstinessOutput(List<NGram> finalNGramList,int date){
@@ -581,8 +645,8 @@ public class PeakModeling {
 //	       	Helper.writeNgramToCsv(finalNGramList, experimentsFilePMIcorpusTF_query_peak);
 //	       	DisplayBestTitlesViaCosineSim("PMI_TF_CORPUS",finalNGramList, documentList, topNgramsForConsideration);
 //
-//	       	Collections.sort(finalNGramList, NGram.COMPARATOR_LOG_CORPUS);
-//	       	Helper.writeNgramToCsv(finalNGramList, experimentsFileLOGcorpus);
+	       	Collections.sort(finalNGramList, NGram.COMPARATOR_LOG_CORPUS);
+	       	Helper.writeNgramToCsv(finalNGramList, experimentsFileLOGcorpus);
 //	       	DisplayBestTitlesViaCosineSim("LOG_CORPUS",finalNGramList, documentList, topNgramsForConsideration);
 //
 //	       	Collections.sort(finalNGramList, NGram.COMPARATOR_LOG_PEAK);
@@ -641,6 +705,7 @@ public class PeakModeling {
 	
 	
 	/**
+	 * Get the top N best Ngram and caluclate the cosine similarity to its title; output solr list of titles based on similarity
 	 * Cosine Similarity 
 	 * @param measure
 	 * @param finalNGramList

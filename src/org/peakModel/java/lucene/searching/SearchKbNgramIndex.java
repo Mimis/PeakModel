@@ -40,18 +40,22 @@ public class SearchKbNgramIndex {
 		String fileWithTotalTFperYear = "/Users/mimis/Development/EclipseProject/PeakModel/index/PeakPeriodTFIndex/peakPeriodTFbigrams.tsv";
 		
 		String firstLine = "year:";
+		String ngramText = "Binnengasthuis Amsterdam";
 		String[] allArr = new String[195];
-		Set<String> ngramSet = Helper.readFileLineByLineReturnSetOfLineString("/Users/mimis/Desktop/csvBurst.txt");
-		for(String ngramText:ngramSet){
-			
+//		Set<String> ngramSet = Helper.readFileLineByLineReturnSetOfLineString("/Users/mimis/Desktop/csvBurst.txt");
+//		for(String ngramText:ngramSet){
+//			
 			searchNgramIndex(ngramText, fileWithTotalTFperYear, indexKbNgramFileName,allArr);
 			firstLine += ngramText+":";
 			
-		}
+//		}
+	
+		
+		
 		int startYear = 1800;
-		System.out.println(firstLine);
-		for(String a:allArr)
-			System.out.println(startYear++ +":"+ a);
+//		System.out.println(firstLine);
+//		for(String a:allArr)
+//			System.out.println(startYear++ +":"+ a);
 	}
 
 	
@@ -98,21 +102,21 @@ public class SearchKbNgramIndex {
 			final String ng=doc.get("ngram");
 			System.out.println(ng+"\t"+tfCorpus+"\t"+freqPerYear);
 			
-			Map<Integer,Integer> tfPerYearMap = Helper.importTfYearStringToMap(freqPerYear);
-			int c=0;
-			for(int year=1800;year<1995;year++){
-				int tf = tfPerYearMap.get(year) == null ? 0 : tfPerYearMap.get(year);
-				if(allArr[c] == null)
-					allArr[c] = ""+tf;
-				else
-					allArr[c] = allArr[c]+":"+tf;
-				c++;
-			}
+//			Map<Integer,Integer> tfPerYearMap = Helper.importTfYearStringToMap(freqPerYear);
+//			int c=0;
+//			for(int year=1800;year<1995;year++){
+//				int tf = tfPerYearMap.get(year) == null ? 0 : tfPerYearMap.get(year);
+//				if(allArr[c] == null)
+//					allArr[c] = ""+tf;
+//				else
+//					allArr[c] = allArr[c]+":"+tf;
+//				c++;
+//			}
 			
 			/**
 			 * Burstiness
 			 */
-//			List<Burst> burstList = Burstiness.measureBurstinessMovingAverage(freqPerYear, 2);
+//			List<Burst> burstList = Burstiness.measureBurstinessForWholeCorpusMovingAverage(freqPerYear, 4);
 //			for(Burst b:burstList)
 //				System.out.println(b.toString());
 						

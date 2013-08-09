@@ -1,9 +1,12 @@
-package org.peakModel.java.peakModel;
+package org.peakModel.java.peakModel.clustering;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
+
+import org.peakModel.java.peakModel.NGram;
+import org.peakModel.java.peakModel.document_process.KbDocument;
 
 public class Cluster {
 	

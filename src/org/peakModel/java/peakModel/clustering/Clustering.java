@@ -1,7 +1,9 @@
-package org.peakModel.java.peakModel;
+package org.peakModel.java.peakModel.clustering;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import org.peakModel.java.peakModel.document_process.KbDocument;
 
 public class Clustering {
 

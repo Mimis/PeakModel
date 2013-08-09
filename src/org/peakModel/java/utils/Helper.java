@@ -20,19 +20,24 @@ import org.peakModel.java.peakModel.NGram;
 
 public class Helper {
 	
-	public static Map<Integer,Integer> importTfYearStringToMap(String tfPerYear){
-		Map<Integer,Integer> tfPerYearMap = new HashMap<Integer,Integer>();
+	public static Map<String,Integer> importTfYearStringToMap(String tfPerYear){
+		Map<String,Integer> tfPerYearMap = new HashMap<String,Integer>();
 		String[] tfYearArr = tfPerYear.split(",");
 		for(String yearToFreq:tfYearArr){
 			String[] yearToFreqArr = yearToFreq.split(":");
 			String year = yearToFreqArr[0];
-			if(!year.equals("17yy") && !year.equals("16yy"))
-				tfPerYearMap.put(Integer.parseInt(yearToFreqArr[0]), Integer.parseInt(yearToFreqArr[1]));
+			tfPerYearMap.put(year, Integer.parseInt(yearToFreqArr[1]));
 		}
 		return tfPerYearMap;
 	}
 
 	public static int getTfFromYearToTfMap(int year,Map<Integer,Integer> tfPerYearMap){
+		if(tfPerYearMap.containsKey(year))
+			return tfPerYearMap.get(year);
+		else
+			return 0;
+	}
+	public static int getTfFromYearToTfMap(String year,Map<String,Integer> tfPerYearMap){
 		if(tfPerYearMap.containsKey(year))
 			return tfPerYearMap.get(year);
 		else

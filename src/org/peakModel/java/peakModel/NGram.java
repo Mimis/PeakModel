@@ -21,7 +21,7 @@ public class NGram {
 	private String field;
 	private int nr_of_years_appearance;//in how many years appears
 	//burstiness
-	private double burstiness;
+	private boolean isBurstyOnPeakDate;
 	private List<Burst> burstList;
 
 	//probabilities
@@ -93,18 +93,19 @@ public class NGram {
 		this.burstList = burstList;
 	}
 
+
 	/**
-	 * @return the burstiness
+	 * @return the isBurstyOnPeakDate
 	 */
-	public double getBurstiness() {
-		return burstiness;
+	public boolean isBurstyOnPeakDate() {
+		return isBurstyOnPeakDate;
 	}
 
 	/**
-	 * @param burstiness the burstiness to set
+	 * @param isBurstyOnPeakDate the isBurstyOnPeakDate to set
 	 */
-	public void setBurstiness(double burstiness) {
-		this.burstiness = burstiness;
+	public void setBurstyOnPeakDate(boolean isBurstyOnPeakDate) {
+		this.isBurstyOnPeakDate = isBurstyOnPeakDate;
 	}
 
 	/**
@@ -800,7 +801,7 @@ public class NGram {
 	}
 
 	public String toStringBurstiness() {
-		return ngram + "(tf:"+ this.tf_query_peak + ",tf_peak:"+this.tf_peak+",nr_years:" + this.nr_of_years_appearance +  "\tBurstiness:" + this.burstList.toString() + ")";
+		return ngram + "(tf:"+ this.tf_query_peak + ",tf_peak:"+this.tf_peak+",nr_years:" + this.nr_of_years_appearance +   ")";
 	}
 
 
@@ -885,20 +886,6 @@ public class NGram {
 	
 	//***** COMPARATORS sorting*****//
 	
-	/**
-	 * Sort by Burstiness
-	 */
-	public static Comparator<NGram> COMPARATOR_BURSTINESS = new Comparator<NGram>()
-    {
-        public int compare(NGram o1, NGram o2){
-            if(o2.burstiness > o1.burstiness )
-            	return 1;
-            else if(o2.burstiness < o1.burstiness )
-            	return 0;
-            else 
-            	return 0;
-        }
-    };
 
 
 	
