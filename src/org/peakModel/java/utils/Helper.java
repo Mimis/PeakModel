@@ -8,6 +8,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -16,10 +18,62 @@ import java.util.Set;
 
 import org.apache.lucene.analysis.util.CharArraySet;
 import org.apache.lucene.util.Version;
+import org.peakModel.java.peakModel.LanguageModel;
 import org.peakModel.java.peakModel.NGram;
+import org.peakModel.java.peakModel.burstiness.Burst;
+import org.peakModel.java.peakModel.burstiness.FeatureTemporalProfile;
+import org.peakModel.java.peakModel.document_process.KbDocument;
 
 public class Helper {
+
+	public static void displayLanguageModelsByFrequency(List<LanguageModel> languageModelList,String name,int minLength,int maxLength,int topN){
+		for(int ngramLength=minLength;ngramLength<=maxLength;ngramLength++){
+			LanguageModel lang = languageModelList.get(languageModelList.indexOf(new LanguageModel(ngramLength)));
+			System.out.println("\n\n#"+name+":"+lang.toString());
+			for(NGram ng:lang.getTopFrequentNgrams(topN))
+				System.out.println(ng.getNgram()+"\t"+ng.getTf_query_peak()+"\t"+ng.getP_w_language_model());//+"\n\t"+ng.getDocFreqPerDayMap().toString());
+		}
+	}
+	public static void displayLanguageModelsByEntropy(List<LanguageModel> languageModelList,String name,int minLength,int maxLength,int topN){
+		for(int ngramLength=minLength;ngramLength<=maxLength;ngramLength++){
+			LanguageModel lang = languageModelList.get(languageModelList.indexOf(new LanguageModel(ngramLength)));
+			System.out.println("\n\n#"+name+":"+lang.toString());
+			for(NGram ng:lang.getTopEntropyNgrams(topN))
+				System.out.println(ng.getNgram()+"\t"+ng.getTf_query_peak()+"\t"+ng.getP_w_language_model()+"\t"+ng.getRelative_Entropy());
+		}
+	}
 	
+	public static void displayBurstsDocuments(FeatureTemporalProfile featureTemporalProfile,List<KbDocument> documentList){
+		Collections.sort(featureTemporalProfile.getBurstList(), Burst.COMPARATOR_BURSTINESS);
+        for(Burst burst:featureTemporalProfile.getBurstList()){
+        	Set<String> burstYearSet = burst.getDateSet();
+        	System.out.println("\n#"+burst.toString());
+        	
+//			for(KbDocument kb : documentList){
+//				if(burstYearSet.contains(kb.getDate()))
+//					System.out.println("\t"+kb.getDate()+"\t"+kb.getTitle()+"\t"+kb.getTokenSet().toString());
+//			}
+        }
+	}
+	public static void displayNoBurstsDocuments(FeatureTemporalProfile featureTemporalProfile,List<KbDocument> documentList){
+		Set<String> allBurstYearSet = new HashSet<String>();
+        for(Burst burst:featureTemporalProfile.getBurstList()){
+        	allBurstYearSet.addAll(burst.getDateSet());
+        }
+    	System.out.println("\n#Non Burst Periods:");
+    	for(KbDocument kb : documentList){
+  			if(!allBurstYearSet.contains(kb.getDate()))
+				System.out.println("\t"+kb.getDate()+"\t"+kb.getTitle()+"\t"+kb.getTokenSet().toString());
+		}    
+	}
+
+	public static boolean arrayContainsGivenString(String[] datesArray,String date){
+		for(String d:datesArray)
+			if(d.equals(date))
+				return true;
+		return false;
+	}
+
 	public static Map<String,Integer> importTfYearStringToMap(String tfPerYear){
 		Map<String,Integer> tfPerYearMap = new HashMap<String,Integer>();
 		String[] tfYearArr = tfPerYear.split(",");
@@ -338,6 +392,14 @@ public class Helper {
 		return tokenNoNgramNumbersList;
 	}
 
+	public static List<String> getGivenLengthNgramsFromList(Collection<String> tokenList,int ngramLength){
+		List<String> tokenOnlyGivenLengthList = new ArrayList<String>();
+		for(String token:tokenList){
+			if(token.split(" ").length == ngramLength)
+				tokenOnlyGivenLengthList.add(token);
+		}
+		return tokenOnlyGivenLengthList;
+	}
 	
 	public static List<String> keepOnlyBigramsFromList(List<String> tokenList){
 		List<String> tokenOnlyBiList = new ArrayList<String>();
@@ -377,17 +439,19 @@ public class Helper {
 
 	}
 	
-	public static void mapTokenListToNGramList(List<String> tokenList,String field,List<NGram> ngramList) throws IOException{
+	public static void mapTokenListToNGramList(Collection<String> tokenList,String date, String field,List<NGram> ngramList) throws IOException{
 		for(String token:tokenList){
 			NGram newNGram = new NGram(token,field);
 			int indexOfNgram = ngramList.indexOf(newNGram);
 			if(indexOfNgram != -1){
 				NGram ngram =ngramList.get(indexOfNgram);
 				ngram.increaseTFpeakByone();
+//				ngram.addDateDocFrequency(date);
 			}
 			else{
 				ngramList.add(newNGram);
 				newNGram.setTf_query_peak(1);
+//				newNGram.addDateDocFrequency(date);
 			}
 		}
 	}

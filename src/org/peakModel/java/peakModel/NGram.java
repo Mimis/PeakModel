@@ -1,9 +1,11 @@
 package org.peakModel.java.peakModel;
 
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 
 import org.peakModel.java.peakModel.burstiness.Burst;
+import org.peakModel.java.peakModel.burstiness.FeatureTemporalProfile;
 import org.peakModel.java.utils.Helper;
 
 
@@ -23,8 +25,12 @@ public class NGram {
 	//burstiness
 	private boolean isBurstyOnPeakDate;
 	private List<Burst> burstList;
-
+	private HashMap<String,Integer> docFreqPerDayMap;
+	private FeatureTemporalProfile temporalProfile;
 	//probabilities
+	private double P_w_language_model;//this based on df and total number of documents
+	private double Relative_Entropy;//entropy between burst and non burst models
+
 	private double P_w;
 	private double P_w_Given_query_peak;
 	private double P_w_Given_time; 
@@ -55,29 +61,85 @@ public class NGram {
 		super();
 		this.ngram = ngram;
 		this.field = field;
+		this.docFreqPerDayMap = new HashMap<String,Integer>();
 	}
 	
+
+	/**
+	 * @return the relative_Entropy
+	 */
+	public double getRelative_Entropy() {
+		return Relative_Entropy;
+	}
+
+
+	/**
+	 * @param relative_Entropy the relative_Entropy to set
+	 */
+	public void setRelative_Entropy(double relative_Entropy) {
+		Relative_Entropy = relative_Entropy;
+	}
+
+
+	/**
+	 * @return the temporalProfile
+	 */
+	public FeatureTemporalProfile getTemporalProfile() {
+		return temporalProfile;
+	}
+
+
+	/**
+	 * @param temporalProfile the temporalProfile to set
+	 */
+	public void setTemporalProfile(FeatureTemporalProfile temporalProfile) {
+		this.temporalProfile = temporalProfile;
+	}
+
+
+	/**
+	 * @return the docFreqPerDayMap
+	 */
+	public HashMap<String, Integer> getDocFreqPerDayMap() {
+		return docFreqPerDayMap;
+	}
+
+	public void addDateDocFrequency(String date){
+		if(docFreqPerDayMap.containsKey(date)){
+			docFreqPerDayMap.put(date, docFreqPerDayMap.get(date)+1);
+		}else{
+			docFreqPerDayMap.put(date, 1);
+		}
+	}
+
+	/**
+	 * @param docFreqPerDayMap the docFreqPerDayMap to set
+	 */
+	public void setDocFreqPerDayMap(HashMap<String, Integer> docFreqPerDayMap) {
+		this.docFreqPerDayMap = docFreqPerDayMap;
+	}
+
+
+	/**
+	 * @return the p_w_language_model
+	 */
+	public double getP_w_language_model() {
+		return P_w_language_model;
+	}
+
+
+	/**
+	 * @param p_w_language_model the p_w_language_model to set
+	 */
+	public void setP_w_language_model(double p_w_language_model) {
+		P_w_language_model = p_w_language_model;
+	}
+
+
 	public void increaseTFpeakByone() {
 		this.tf_query_peak += 1;
 	}
 
-	public boolean isBurstyOnGivenYear(int year){
-		for(Burst burst : this.burstList){
-			if(burst.getYearList().contains(year))
-				return true;
-		}
-		return false;
-	}
-
-	public boolean isBurstyOnlyOnGivenYear(int year){
-		if(this.burstList.size() != 1)
-			return false;
-		for(Burst burst : this.burstList){
-			if(burst.getYearList().contains(year))
-				return true;
-		}
-		return false;
-	}
 
 	/**
 	 * @return the burstList
@@ -886,9 +948,38 @@ public class NGram {
 	
 	//***** COMPARATORS sorting*****//
 	
+    /**
+	 * Sort by Probability to pick by random an item in document set that we extract this ngram and to be this one
+	 */
+	public static Comparator<NGram> COMPARATOR_PROBABILITY = new Comparator<NGram>()
+    {
+        public int compare(NGram o1, NGram o2){
+            if(o2.P_w_language_model > o1.P_w_language_model )
+            	return 1;
+            else if(o2.P_w_language_model < o1.P_w_language_model )
+            	return 0;
+            else 
+            	return 0;
+        }
+    };
 
 
-	
+	/**
+	 * Sort by Realtive ENtropy
+	 */
+	public static Comparator<NGram> COMPARATOR_ENTROPY = new Comparator<NGram>()
+    {
+        public int compare(NGram o1, NGram o2){
+            if(o2.Relative_Entropy > o1.Relative_Entropy )
+            	return 1;
+            else if(o2.Relative_Entropy < o1.Relative_Entropy )
+            	return 0;
+            else 
+            	return 0;
+        }
+    };
+
+
 	/**
 	 * Sort by Total Term Frequency in the result documents
 	 */

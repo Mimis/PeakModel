@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -24,11 +23,8 @@ import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.Version;
 import org.peakModel.java.lucene.searching.NGramIndexSearch;
-import org.peakModel.java.peakModel.burstiness.Burst;
-import org.peakModel.java.peakModel.burstiness.Burstiness;
 import org.peakModel.java.peakModel.clustering.Cluster;
 import org.peakModel.java.peakModel.clustering.Clustering;
-import org.peakModel.java.peakModel.document_process.AssignBurstyWeightToDocument;
 import org.peakModel.java.peakModel.document_process.KbDocument;
 import org.peakModel.java.utils.Helper;
 import org.peakModel.java.utils.HelperLucene;
@@ -192,7 +188,7 @@ public class PeakModeling {
 				final String title = doc.get("title");				
 				final String docDate = doc.get("date");
 				final String url = doc.get("url");				
-//				System.out.println(docDate+"\t"+title+"\tScore:"+hits[i].score);
+				System.out.println(docDate+"\t"+title+"\tScore:"+hits[i].score);
 				
 				//Skip larger than N titles
 				List<String> tokenList = HelperLucene.tokenizeString(NgramAnalyzerForTokenization, title);
@@ -204,12 +200,12 @@ public class PeakModeling {
 				if(minN == 2){
 					//this is for phraseness
 					List<String> unigramTokenList = Helper.keepOnlyUnigramsFromList(tokenList);				
-					Helper.mapTokenListToNGramList(unigramTokenList, "title", unigramList);
+					Helper.mapTokenListToNGramList(unigramTokenList, docDate,"title", unigramList);
 					//this the candidate keyphrases
 					tokenList = Helper.keepOnlyBigramsFromList(tokenList);				
 				}
 				documentList.add(new KbDocument(docId, title,tokenList,docDate,url,hits[i].score));
-				Helper.mapTokenListToNGramList(tokenList, "title", ngramList);
+				Helper.mapTokenListToNGramList(tokenList,docDate, "title", ngramList);
 				
 				
 				if(queryDocFreqPerDayMap.containsKey(docDate)){
@@ -219,29 +215,6 @@ public class PeakModeling {
 					queryDocFreqPerDayMap.put(docDate, 1);
 			}
         }
-        StringBuilder freqPerYear= new StringBuilder();
-        long total=0;
-        for(Map.Entry<String,Integer>entry:queryDocFreqPerDayMap.entrySet()){
-//        	System.out.println(entry.getKey()+"\t"+entry.getValue());
-        	freqPerYear.append(entry.getKey()+":"+entry.getValue()+",");
-        	total+=entry.getValue();
-        }
-//        System.out.println(freqPerYear.toString());
-//		List<Burst> burstList = Burstiness.measureBurstinessMovingAverage(freqPerYear.toString(), 7);
-        LinkedHashMap<String,Double> movingAvgNormOnlyList = Burstiness.measureBurstinessForPeakYearMovingAverage(date, freqPerYear.toString(), 2);
-		for(Map.Entry<String, Double> entry:movingAvgNormOnlyList.entrySet()){
-			String d = entry.getKey();
-			double burstiness = entry.getValue();
-			String f=d+"\t";
-			if(queryDocFreqPerDayMap.containsKey(d)){
-				double a = (double)queryDocFreqPerDayMap.get(d) / total;
-				f += a+"\t"+burstiness;
-			}
-			else
-				f +=0+"\t"+burstiness;
-			
-//			System.out.println(f);
-		}
 
 	
         
@@ -425,13 +398,6 @@ public class PeakModeling {
 	    System.out.println("#Total Indexing run time:"+ (endTime-startTime)/1000);
 	}
 	
-	public static void assignBurstinesstoNgrams(List<NGram> finalNGramList,int date){
-       	Collections.sort(finalNGramList, NGram.COMPARATOR_LOG_CORPUS);
-       	for(NGram ng:finalNGramList){
-       		if(ng.isBurstyOnlyOnGivenYear(date))
-       			ng.setBurstyOnPeakDate(true);
-       	}
-	}
 	
 	
 	public static void testBurstinessOutput(List<NGram> finalNGramList,int date){
@@ -530,7 +496,7 @@ public class PeakModeling {
         for(NGram ngram:finalNGramList){
         	ngram.calculateProbabilities(N_corpus, N_query_peakPeriod, N_peak);
     		if(minN == 2){
-    			ngram.computePhrasenessPKLForeground(unigramList);
+//    			ngram.computePhrasenessPKLForeground(unigramList);
 //    			ngram.computePhrasenessPMIForeground(unigramList);
 //    			ngram.computePhrasenessPKLBackgroundPeak(unigramList);
 //    			ngram.computePhrasenessPMIBackgroundPeak(unigramList);
@@ -550,7 +516,7 @@ public class PeakModeling {
         	ngram.computeDicePeak(N_query_peakPeriod);
         	ngram.computePhiSquareCorpus(N_query_peakPeriod, N_corpus);
         	ngram.computePhiSquarePeak(N_query_peakPeriod, N_peak);
-        	ngram.computeTF_IDF(N_years,maxTF_query_peak);
+//        	ngram.computeTF_IDF(N_years,maxTF_query_peak);
         	ngram.computeMY_APPROACH();
         }
 	}
@@ -689,10 +655,10 @@ public class PeakModeling {
 		List<KbDocument> documentWithHitsList = new ArrayList<KbDocument>();
 		List<NGram> peakModelNGramList = ngramList.subList(0, ngramList.size() > topNgramsForConsideration ? topNgramsForConsideration : ngramList.size());
 		for(KbDocument kbDoc : documentList){
-			Map<String,Integer> docNgramMap = kbDoc.getTokenMap();
+			Set<String> docNgramMap = kbDoc.getTokenSet();
 			Set<NGram> docNgramHitsList = new HashSet<NGram>();
 			for(NGram ngram:peakModelNGramList){
-				if(docNgramMap.containsKey(ngram.getNgram()))
+				if(docNgramMap.contains(ngram.getNgram()))
 					docNgramHitsList.add(ngram);
 			}
 			if(!docNgramHitsList.isEmpty()){

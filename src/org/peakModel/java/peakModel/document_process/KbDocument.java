@@ -1,10 +1,8 @@
 package org.peakModel.java.peakModel.document_process;
 
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import org.peakModel.java.peakModel.NGram;
@@ -17,7 +15,7 @@ public class KbDocument {
 	private final String url;
 
 	private final double score;
-	private final Map<String,Integer> tokenMap;
+	private final Set<String> tokenSet; //set because we wanna only unique tokens;we count document frequency only
 	private double cosineSimilarity;
 	private Set<NGram> ngramHitsList;
 	private Set<NGram> ngramBurstyList;
@@ -33,26 +31,21 @@ public class KbDocument {
 		this.id = id;
 		this.date = date;
 		this.url = url;
-		this.tokenMap = mapListToMapWithTF(tokenList);
+		this.tokenSet = new HashSet<String>(tokenList);
 		this.cosineSimilarity = 0.0;
 		this.score = score;
 		this.ngramBurstyList = new HashSet<NGram>();
 	}
-	private Map<String,Integer> mapListToMapWithTF(List<String> tokenList){
-		Map<String,Integer> tokenMap = new HashMap<String,Integer>();
-		for(String token:tokenList){
-			if(tokenMap.containsKey(token)){
-				int tf = tokenMap.get(token);
-				tokenMap.put(token, tf+1);
-			}
-			else
-				tokenMap.put(token, 1);
-		}
-		return tokenMap;
+	
+	
+	
+	/**
+	 * @return the tokenSet
+	 */
+	public Set<String> getTokenSet() {
+		return tokenSet;
 	}
-	
-	
-	
+
 	/**
 	 * @return the url
 	 */
@@ -106,12 +99,6 @@ public class KbDocument {
 	 */
 	public int getId() {
 		return id;
-	}
-	/**
-	 * @return the tokenMap
-	 */
-	public Map<String,Integer> getTokenMap() {
-		return tokenMap;
 	}
 	
 	/**

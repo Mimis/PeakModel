@@ -2,7 +2,6 @@ package org.peakModel.java.peakModel;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import org.peakModel.java.peakModel.document_process.KbDocument;
@@ -47,22 +46,22 @@ public class PeakModelWithDocumentSimilarity {
 		int numerator = 0;
 		double cosineSimilarity = 0.0;
 		for(KbDocument kbDocument : documentList){
-			if(kbDocument.getTokenMap().isEmpty()){
+			if(kbDocument.getTokenSet().isEmpty()){
 				kbDocument.setCosineSimilarity(0.0);
 				continue;
 			}
 			normalizedDocumentVector = getNormalizedDocVector(kbDocument);
-			numerator = getNumeratorOfCosineSim(peakModelNGramList, kbDocument.getTokenMap());
+			numerator = getNumeratorOfCosineSim(peakModelNGramList, kbDocument.getTokenSet());
 			cosineSimilarity = numerator / (normalizedPeakModelVector * normalizedDocumentVector);
 			kbDocument.setCosineSimilarity(cosineSimilarity);
 		}
        	Collections.sort(documentList, KbDocument.COMPARATOR_COSINE);
 	}
-	private static int getNumeratorOfCosineSim(List<NGram> peakModelNGramList,Map<String,Integer> docTokenMap){
+	private static int getNumeratorOfCosineSim(List<NGram> peakModelNGramList,Set<String> docTokenSet){
 		int numerator = 0;
 		for(NGram ng : peakModelNGramList){
-			if(docTokenMap.containsKey(ng.getNgram())){
-				numerator += ng.getTf_query_peak() * docTokenMap.get(ng.getNgram());
+			if(docTokenSet.contains(ng.getNgram())){
+				numerator += ng.getTf_query_peak() * 1;
 			}					
 		}
 		return numerator;
@@ -77,8 +76,8 @@ public class PeakModelWithDocumentSimilarity {
 	}
 	private static double getNormalizedDocVector(KbDocument kbDocument){
 		double normalizedDocument = 0.0;
-		for(Map.Entry<String, Integer> entry : kbDocument.getTokenMap().entrySet())
-			normalizedDocument += Math.pow(entry.getValue(),2);		
+		for(String token : kbDocument.getTokenSet())
+			normalizedDocument += Math.pow(1,2);		
 		return Math.sqrt(normalizedDocument);
 	}
 }
