@@ -34,6 +34,17 @@ public class LanguageModel {
 		this.ngramLength = ngramLength;
 	}
 
+	/**
+	 * @return the ngram that is equal to given one,otherwise null
+	 */
+	public NGram getNgram(String ngramText,String field) {
+		int index = ngramList.indexOf(new NGram(ngramText,field));
+		if(index == -1)
+			return null;
+		else
+			return ngramList.get(index);
+	}
+
 
 	/**
 	 * 

@@ -21,6 +21,7 @@ import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.Version;
+import org.peakModel.java.lucene.searching.Test;
 import org.peakModel.java.peakModel.burstiness.Burst;
 import org.peakModel.java.peakModel.burstiness.Burstiness;
 import org.peakModel.java.peakModel.burstiness.FeatureTemporalProfile;
@@ -140,7 +141,7 @@ public class PeakModeling2 {
 		 */
 		System.out.println("total Docs:"+peakModel.totalNumberOfRelevantDocuments+"\tBurstsDocs:"+burstDocList.size()+"\tNonBurstsDocs:"+nonBurstDocList.size());
 //		Helper.displayLanguageModelsByEntropy(burstLanguageModelList, "Burst",minNGramLengthLM,maxNGramLengthLM,20);
-		Helper.displayLanguageModelsByLogLikelihood(burstLanguageModelList,noBurstLanguageModelList, "Burst",minNGramLengthLM,maxNGramLengthLM,200);
+		Helper.displayLanguageModelsByLogLikelihood(burstLanguageModelList,noBurstLanguageModelList, "Burst",minNGramLengthLM,maxNGramLengthLM,20);
 		
 //		Helper.displayLanguageModelsByFrequency(burstLanguageModelList, "Burst",minNGramLengthLM,maxNGramLengthLM,2000);
 //		Helper.displayLanguageModelsByFrequency(noBurstLanguageModelList, "Non Burst",minNGramLengthLM,maxNGramLengthLM,2000);
@@ -151,6 +152,18 @@ public class PeakModeling2 {
 //        Helper.displayNoBurstsDocuments(queryTemporalProfile, peakModel.documentList);
 //		displayGeneral(allDocsLanguageModelList, queryTemporalProfile);
 
+		
+		
+		
+		//Test Back OFF model
+		LanguageModel biggerLangModel = burstLanguageModelList.get(burstLanguageModelList.indexOf(new LanguageModel(maxNGramLengthLM)));
+		for(NGram ngram:biggerLangModel.getNgramList())
+			Test.calculateLogLikelihoofBasedOnBackOffModel(ngram, burstLanguageModelList);
+		Helper.displayLanguageModelsByLogLikelihood(burstLanguageModelList,noBurstLanguageModelList, "Burst",minNGramLengthLM,maxNGramLengthLM,20);
+
+		
+		
+		
         
         //Close Indexes
         peakModel.closeIndexes();
