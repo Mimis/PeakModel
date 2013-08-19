@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.lucene.analysis.Analyzer;
@@ -98,7 +99,7 @@ public class PeakModeling2 {
          * Create Language models for each class(Burst,NonBurst);Ngram Candidate lists form each document set with length 1 to 3
          */
         int minNGramLengthLM = 1;
-        int maxNGramLengthLM = 3;
+        int maxNGramLengthLM = 4;
         //BURSTs DOCS:get all documents that are published on the burst period and extract Ngram Models
 		List<KbDocument> burstDocList = peakModel.getBurstsDocumentsList(queryTemporalProfile);
 		List<LanguageModel> burstLanguageModelList = createLanguageModels(burstDocList, minNGramLengthLM, maxNGramLengthLM);
@@ -106,18 +107,19 @@ public class PeakModeling2 {
 		List<KbDocument> nonBurstDocList = peakModel.getNonBurstsDocumentsList(queryTemporalProfile);
 		List<LanguageModel> noBurstLanguageModelList = createLanguageModels(nonBurstDocList, minNGramLengthLM, maxNGramLengthLM);
 		//ALL DOCUMENTS
-		//List<LanguageModel> allDocsLanguageModelList = createLanguageModels(peakModel.documentList, minNGramLengthLM, maxNGramLengthLM);
+//		List<LanguageModel> allDocsLanguageModelList = createLanguageModels(peakModel.documentList, minNGramLengthLM, maxNGramLengthLM);
 
+		
 
 		/**
 		 * Measure entropy between burst and non burst features
 		 */
-//		for(int ngramLength=minNGramLengthLM;ngramLength<=maxNGramLengthLM;ngramLength++){
-//			LanguageModel m1 = burstLanguageModelList.get(burstLanguageModelList.indexOf(new LanguageModel(ngramLength)));
-//			LanguageModel m2 = noBurstLanguageModelList.get(noBurstLanguageModelList.indexOf(new LanguageModel(ngramLength)));
+		for(int ngramLength=minNGramLengthLM;ngramLength<=maxNGramLengthLM;ngramLength++){
+			LanguageModel m1 = burstLanguageModelList.get(burstLanguageModelList.indexOf(new LanguageModel(ngramLength)));
+			LanguageModel m2 = noBurstLanguageModelList.get(noBurstLanguageModelList.indexOf(new LanguageModel(ngramLength)));
 //			peakModel.measureRelativeEntropy(m1,m2);
-//		}
-		
+			peakModel.measureSignificanceOfTermsInBurstAgainstNonBurstDocs(m1, m2);
+		}
 		
 		
 		/**
@@ -129,7 +131,7 @@ public class PeakModeling2 {
 //		peakModel.getNgramPerYearSTats(lang.getNgramList());
 		
 		
-		
+
 		
 		
 		
@@ -137,19 +139,22 @@ public class PeakModeling2 {
 		 * VISUALIZATION BURSTS ...
 		 */
 		System.out.println("total Docs:"+peakModel.totalNumberOfRelevantDocuments+"\tBurstsDocs:"+burstDocList.size()+"\tNonBurstsDocs:"+nonBurstDocList.size());
-//		Helper.displayLanguageModelsByEntropy(burstLanguageModelList, "Burst",minNGramLengthLM,maxNGramLengthLM,200);
-		Helper.displayLanguageModelsByFrequency(burstLanguageModelList, "Burst",minNGramLengthLM,maxNGramLengthLM,20000);
+//		Helper.displayLanguageModelsByEntropy(burstLanguageModelList, "Burst",minNGramLengthLM,maxNGramLengthLM,20);
+		Helper.displayLanguageModelsByLogLikelihood(burstLanguageModelList,noBurstLanguageModelList, "Burst",minNGramLengthLM,maxNGramLengthLM,200);
+		
+//		Helper.displayLanguageModelsByFrequency(burstLanguageModelList, "Burst",minNGramLengthLM,maxNGramLengthLM,2000);
 //		Helper.displayLanguageModelsByFrequency(noBurstLanguageModelList, "Non Burst",minNGramLengthLM,maxNGramLengthLM,2000);
 //		Helper.displayLanguageModelsByFrequency(allDocsLanguageModelList, "ALL",minNGramLengthLM,maxNGramLengthLM,20000);
 		
-        Helper.displayBurstsDocuments(queryTemporalProfile, peakModel.documentList);
+//		Helper.displayBurstsPeriods(queryTemporalProfile);
+//        Helper.displayBurstsDocuments(queryTemporalProfile, peakModel.documentList);
 //        Helper.displayNoBurstsDocuments(queryTemporalProfile, peakModel.documentList);
-        
-      
-        
+//		displayGeneral(allDocsLanguageModelList, queryTemporalProfile);
+
         
         //Close Indexes
         peakModel.closeIndexes();
+        
         
         long endTime = System.currentTimeMillis();
 	    System.out.println("#Total Indexing run time:"+ (endTime-startTime)/1000);
@@ -177,7 +182,41 @@ public class PeakModeling2 {
 		}
 	}
 	
-	
+	/**
+	 * Measure the log likelihood for each term in burst doc set against the non burst doc set
+	 * @see http://ucrel.lancs.ac.uk/llwizard.html
+	 * @param M1
+	 * @param M2
+	 */
+	public void measureSignificanceOfTermsInBurstAgainstNonBurstDocs(LanguageModel M1,LanguageModel M2){
+		int totalNgramFreqM1 = M1.getTotalNGramFrequency();
+		int totalNgramFreqM2 = M2.getTotalNGramFrequency();
+		int totalNgramFreqBothModels = totalNgramFreqM1 + totalNgramFreqM2;
+		List<NGram> m2NGramList = M2.getNgramList();
+		for(NGram ngram : M1.getNgramList()){
+			int a = ngram.getTf_query_peak();
+			int b = 0;
+			int indexOfCurrentNGramInM2 = m2NGramList.indexOf(ngram);
+			if(indexOfCurrentNGramInM2 != -1)
+				b = m2NGramList.get(indexOfCurrentNGramInM2).getTf_query_peak();
+
+			double E1 = (double)totalNgramFreqM1 * (a+b) / totalNgramFreqBothModels;
+			double E2 = (double)totalNgramFreqM2 * (a+b) / totalNgramFreqBothModels;
+			//@see http://ucrel.lancs.ac.uk/llwizard.html
+			double secondParam = 0.0;
+			if(b!=0)
+				secondParam = (double)(b * Math.log((b/E2)));
+			double LOG_Likelyhood_burst = (double) 2 * ((a * Math.log((a/E1))) + secondParam);
+			
+//			int c = totalNgramFreqM1 - a;
+//			int d = totalNgramFreqM2 - b;
+//			double LOG_Likelyhood_burst = 2 * (a * Helper.log2(a) + b * Helper.log2(b) + c * Helper.log2(c) + d * Helper.log2(d) - (a + b) * Helper.log2(a + b) - (a + c) * Helper.log2(a + c) - (b + d) * Helper.log2(b + d) - (c + d) * Helper.log2(c + d)+ (a + b + c + d)* Helper.log2(a + b + c + d));
+			if(a<b)
+				LOG_Likelyhood_burst *= -1;
+			ngram.setLOG_Likelyhood_burst(LOG_Likelyhood_burst);
+		}
+	}
+
 	/**
 	 * 
 	 * @param ngramList
@@ -370,7 +409,7 @@ public class PeakModeling2 {
 	}
 
 	/**
-	 * 
+	 * TODO this needs refactoring to be more efficient
 	 * @param featureTemporalProfile
 	 * @param documentList
 	 * @return list of documents that are published durring query;s burst periods
@@ -520,6 +559,24 @@ public class PeakModeling2 {
 		if(date != null)
 			queryFinal = queryFinal + " AND date:["+date+"-01-01 TO "+date+"-12-31]";
 		return queryFinal;
+	}
+	
+	public static void displayGeneral(List<LanguageModel> allDocsLanguageModelList, FeatureTemporalProfile queryTemporalProfile){
+		LanguageModel lang = allDocsLanguageModelList.get(allDocsLanguageModelList.indexOf(new LanguageModel(4)));
+		NGram door_philip = lang.getNgramList().get(lang.getNgramList().indexOf(new NGram("door philip van tijn","title")));
+		NGram door_frits = lang.getNgramList().get(lang.getNgramList().indexOf(new NGram("door frits van der","title")));
+
+		for(Map.Entry<String,Integer> entry:queryTemporalProfile.getFeatureDocFreqPerDayMap().entrySet()){
+			int ngDf = 0;
+			int ngDf2 = 0;
+			if(door_philip.getDocFreqPerDayMap().containsKey(entry.getKey()))
+				ngDf = door_philip.getDocFreqPerDayMap().get(entry.getKey());
+			if(door_frits.getDocFreqPerDayMap().containsKey(entry.getKey()))
+				ngDf2 = door_frits.getDocFreqPerDayMap().get(entry.getKey());
+
+			System.out.println(entry.getKey()+"\t"+entry.getValue()+"\t"+ngDf+"\t"+ngDf2);
+		}
+
 	}
 
 }

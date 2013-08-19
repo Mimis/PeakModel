@@ -30,7 +30,7 @@ public class NGram {
 	//probabilities
 	private double P_w_language_model;//this based on df and total number of documents
 	private double Relative_Entropy;//entropy between burst and non burst models
-
+	private double LOG_Likelyhood_burst;//log likelihood on burst doc set against the non burst docs
 	private double P_w;
 	private double P_w_Given_query_peak;
 	private double P_w_Given_time; 
@@ -64,6 +64,22 @@ public class NGram {
 		this.docFreqPerDayMap = new HashMap<String,Integer>();
 	}
 	
+
+	/**
+	 * @return the lOG_Likelyhood_burst
+	 */
+	public double getLOG_Likelyhood_burst() {
+		return LOG_Likelyhood_burst;
+	}
+
+
+	/**
+	 * @param lOG_Likelyhood_burst the lOG_Likelyhood_burst to set
+	 */
+	public void setLOG_Likelyhood_burst(double lOG_Likelyhood_burst) {
+		LOG_Likelyhood_burst = lOG_Likelyhood_burst;
+	}
+
 
 	/**
 	 * @return the relative_Entropy
@@ -957,6 +973,21 @@ public class NGram {
             if(o2.P_w_language_model > o1.P_w_language_model )
             	return 1;
             else if(o2.P_w_language_model < o1.P_w_language_model )
+            	return 0;
+            else 
+            	return 0;
+        }
+    };
+
+	/**
+	 * Sort by Realtive ENtropy
+	 */
+	public static Comparator<NGram> COMPARATOR_LOG_LIKELIHOOD_BURST = new Comparator<NGram>()
+    {
+        public int compare(NGram o1, NGram o2){
+            if(o2.LOG_Likelyhood_burst > o1.LOG_Likelyhood_burst )
+            	return 1;
+            else if(o2.LOG_Likelyhood_burst < o1.LOG_Likelyhood_burst )
             	return 0;
             else 
             	return 0;

@@ -39,9 +39,32 @@ public class Helper {
 			LanguageModel lang = languageModelList.get(languageModelList.indexOf(new LanguageModel(ngramLength)));
 			System.out.println("\n\n#"+name+":"+lang.toString());
 			for(NGram ng:lang.getTopEntropyNgrams(topN))
-				System.out.println(ng.getNgram()+"\t"+ng.getTf_query_peak()+"\t"+ng.getP_w_language_model()+"\t"+ng.getRelative_Entropy());
+				System.out.println(ng.getNgram()+"\t"+ng.getTf_query_peak()+"\t"+ng.getP_w_language_model()+"\t"+ng.getLOG_Likelyhood_burst());
 		}
 	}
+
+	public static void displayLanguageModelsByLogLikelihood(List<LanguageModel> languageModelList,List<LanguageModel> negLanguageModelList,String name,int minLength,int maxLength,int topN){
+		for(int ngramLength=minLength;ngramLength<=maxLength;ngramLength++){
+			LanguageModel lang = languageModelList.get(languageModelList.indexOf(new LanguageModel(ngramLength)));
+			LanguageModel negLang = negLanguageModelList.get(negLanguageModelList.indexOf(new LanguageModel(ngramLength)));
+
+			System.out.println("\n\n#"+name+":"+lang.toString());
+			for(NGram ng:lang.getTopLogBurstNgrams(topN)){
+				int negLMngram = 0;
+				if(negLang.getNgramList().contains(ng))
+					negLMngram = negLang.getNgramList().get(negLang.getNgramList().indexOf(ng)).getTf_query_peak();
+				System.out.println(ng.getNgram()+"\t"+ng.getTf_query_peak()+"\t"+negLMngram+"\t"+ng.getP_w_language_model()+"\t"+ng.getLOG_Likelyhood_burst());
+			}
+		}
+	}
+
+	public static void displayBurstsPeriods(FeatureTemporalProfile featureTemporalProfile){
+		Collections.sort(featureTemporalProfile.getBurstList(), Burst.COMPARATOR_BURSTINESS);
+        for(Burst burst:featureTemporalProfile.getBurstList()){
+        	System.out.println("\n#"+burst.toString());
+        }
+	}
+
 	
 	public static void displayBurstsDocuments(FeatureTemporalProfile featureTemporalProfile,List<KbDocument> documentList){
 		Collections.sort(featureTemporalProfile.getBurstList(), Burst.COMPARATOR_BURSTINESS);
@@ -49,10 +72,10 @@ public class Helper {
         	Set<String> burstYearSet = burst.getDateSet();
         	System.out.println("\n#"+burst.toString());
         	
-//			for(KbDocument kb : documentList){
-//				if(burstYearSet.contains(kb.getDate()))
-//					System.out.println("\t"+kb.getDate()+"\t"+kb.getTitle()+"\t"+kb.getTokenSet().toString());
-//			}
+			for(KbDocument kb : documentList){
+				if(burstYearSet.contains(kb.getDate()))
+					System.out.println("\t"+kb.getDate()+"\t"+kb.getTitle()+"\t"+kb.getTokenSet().toString());
+			}
         }
 	}
 	public static void displayNoBurstsDocuments(FeatureTemporalProfile featureTemporalProfile,List<KbDocument> documentList){
@@ -446,12 +469,12 @@ public class Helper {
 			if(indexOfNgram != -1){
 				NGram ngram =ngramList.get(indexOfNgram);
 				ngram.increaseTFpeakByone();
-//				ngram.addDateDocFrequency(date);
+				ngram.addDateDocFrequency(date);
 			}
 			else{
 				ngramList.add(newNGram);
 				newNGram.setTf_query_peak(1);
-//				newNGram.addDateDocFrequency(date);
+				newNGram.addDateDocFrequency(date);
 			}
 		}
 	}

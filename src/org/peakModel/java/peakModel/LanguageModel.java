@@ -49,6 +49,10 @@ public class LanguageModel {
 		Collections.sort(this.ngramList,NGram.COMPARATOR_ENTROPY);
 		return this.ngramList.subList(0, this.ngramList.size() < topN ? this.ngramList.size() : topN);
 	}
+	public List<NGram> getTopLogBurstNgrams(int topN) {
+		Collections.sort(this.ngramList,NGram.COMPARATOR_LOG_LIKELIHOOD_BURST);
+		return this.ngramList.subList(0, this.ngramList.size() < topN ? this.ngramList.size() : topN);
+	}
 
 	/**
 	 * 
