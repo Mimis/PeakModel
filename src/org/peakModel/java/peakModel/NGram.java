@@ -1,5 +1,6 @@
 package org.peakModel.java.peakModel;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -614,7 +615,12 @@ public class NGram {
 		long c = N_query_peakPeriod - a;
 		long d = N_corpus - b;
 		this.LOG_Likelyhood_corpus = 2 * (a * Helper.log2(a) + b * Helper.log2(b) + c * Helper.log2(c) + d * Helper.log2(d) - (a + b) * Helper.log2(a + b) - (a + c) * Helper.log2(a + c) - (b + d) * Helper.log2(b + d) - (c + d) * Helper.log2(c + d)+ (a + b + c + d)* Helper.log2(a + b + c + d));
-		
+
+		//second version
+//		double E1 = (double)N_query_peakPeriod * (a+b) / (N_query_peakPeriod+N_corpus);
+//		double E2 = (double)N_corpus * (a+b) / (N_query_peakPeriod+N_corpus);
+//		this.LOG_Likelyhood_corpus=(double) 2 * ((a * Math.log((a/E1))) + (b * Math.log((b/E2))));
+
 	}
 	/**
 	 * Calculate LOG_Likelyhood_peak as below:
@@ -852,7 +858,44 @@ public class NGram {
 		this.MY_APPROACH = this.TF_IDF * this.LOG_Likelyhood_corpus;		
 	}
 	
+	/**
+	 * Calculate log likelihood via a back off model approach;add the scores of the sub-ngrams that include this ngram
+	 * @param languageModelList
+	 */
+	public  void calculateLogLikelihoofBasedOnBackOffModel(List<LanguageModel> languageModelList){
+		double finalLogLikelihood = getLOG_Likelyhood_burst();
+		
+		String unigrams[] = this.ngram.split(" ");
+		for(int ngramLevel=unigrams.length-1;ngramLevel>0;ngramLevel--){
+			LanguageModel langModel = languageModelList.get(languageModelList.indexOf(new LanguageModel(ngramLevel)));
+			finalLogLikelihood += getLogLikeihoodOfSubNgrams(unigrams, langModel, ngramLevel);
+		}
+		setLOG_Likelyhood_burst(finalLogLikelihood);
+	}
 	
+	private  double getLogLikeihoodOfSubNgrams(String unigrams[],LanguageModel langModel,int ngramLevel){
+		double log_likelihood = 0.0;
+		for(String ngramText:createNgrams(unigrams,ngramLevel)){
+			NGram ngram = langModel.getNgram(ngramText, "title");
+			log_likelihood += ngram.getLOG_Likelyhood_burst();
+		}
+		return log_likelihood;
+	}
+	private List<String> createNgrams(String unigrams[],int ngramLevel){
+		List<String> ngramList = new ArrayList<String>();
+		for(int i=0;i<unigrams.length;i++){
+			StringBuilder buf = new StringBuilder();
+			buf.append(unigrams[i]);
+			int lastIndex = i+ngramLevel <= unigrams.length ? i+ngramLevel : -1;
+			if(lastIndex==-1)break;
+			for(int y=i+1;y<lastIndex;y++){
+				buf.append(" "+unigrams[y]);
+			}
+			ngramList.add(buf.toString());
+		}
+		return ngramList;
+	}
+
 	
 	//========================================================  END PROBABILITIES ======================================================================
 	

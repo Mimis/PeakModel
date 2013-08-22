@@ -26,12 +26,18 @@ import org.peakModel.java.peakModel.document_process.KbDocument;
 
 public class Helper {
 
-	public static void displayLanguageModelsByFrequency(List<LanguageModel> languageModelList,String name,int minLength,int maxLength,int topN){
+	public static void displayLanguageModelsByFrequency(List<LanguageModel> languageModelList,String name,List<String> stopWordsList,int minLength,int maxLength,int topN){
 		for(int ngramLength=minLength;ngramLength<=maxLength;ngramLength++){
 			LanguageModel lang = languageModelList.get(languageModelList.indexOf(new LanguageModel(ngramLength)));
 			System.out.println("\n\n#"+name+":"+lang.toString());
-			for(NGram ng:lang.getTopFrequentNgrams(topN))
-				System.out.println(ng.getNgram()+"\t"+ng.getTf_query_peak()+"\t"+ng.getP_w_language_model());//+"\n\t"+ng.getDocFreqPerDayMap().toString());
+			for(NGram ng:lang.getTopFrequentNgrams(topN)){
+				if(stopWordsList!=null){
+					if(!stopWordsList.contains(ng.getNgram()))
+						System.out.println(ng.getNgram()+"\t"+ng.getTf_query_peak());//+"\t"+ng.getP_w_language_model());//+"\n\t"+ng.getDocFreqPerDayMap().toString());
+				}
+				else
+					System.out.println(ng.getNgram()+"\t"+ng.getTf_query_peak());//+"\t"+ng.getP_w_language_model());//+"\n\t"+ng.getDocFreqPerDayMap().toString());
+			}
 		}
 	}
 	public static void displayLanguageModelsByEntropy(List<LanguageModel> languageModelList,String name,int minLength,int maxLength,int topN){
@@ -43,7 +49,7 @@ public class Helper {
 		}
 	}
 
-	public static void displayLanguageModelsByLogLikelihood(List<LanguageModel> languageModelList,List<LanguageModel> negLanguageModelList,String name,int minLength,int maxLength,int topN){
+	public static void displayLanguageModelsByLogLikelihoodBurst(List<LanguageModel> languageModelList,List<LanguageModel> negLanguageModelList,String name,int minLength,int maxLength,int topN){
 		for(int ngramLength=minLength;ngramLength<=maxLength;ngramLength++){
 			LanguageModel lang = languageModelList.get(languageModelList.indexOf(new LanguageModel(ngramLength)));
 			LanguageModel negLang = negLanguageModelList.get(negLanguageModelList.indexOf(new LanguageModel(ngramLength)));

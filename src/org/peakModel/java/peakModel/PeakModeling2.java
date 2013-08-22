@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -45,6 +46,7 @@ public class PeakModeling2 {
 		final int MAX_TITLE_LENGTH = 100;
 		final int MIN_TITLE_LENGTH = 1;
 		final int burstTimeSpan = 7;
+	    final double x = 2.0;
 
 		//FILES
 		String dutchStopWordsFile =  "/Users/mimis/Development/EclipseProject/PeakModel/data/stopWords/dutch.txt";
@@ -88,12 +90,13 @@ public class PeakModeling2 {
 		 * Get documents based on given query
 		 */
 		peakModel.getKbDocs();
-		
+	    System.out.println("#Total Retrieve Documents run time:"+ (System.currentTimeMillis()-startTime)/1000);
+
 		/*
 		 * Construct Query Temporal Profile
 		 * 	1) detect burst periods based on querys temporal distribution
 		 */
-        FeatureTemporalProfile queryTemporalProfile = Burstiness.measureBurstinessForPeakYearMovingAverage(peakModel.date, peakModel.queryDocFreqPerDayMap, peakModel.burstTimeSpan);
+        FeatureTemporalProfile queryTemporalProfile = Burstiness.measureBurstinessForPeakYearMovingAverage(peakModel.date, peakModel.queryDocFreqPerDayMap, peakModel.burstTimeSpan,x);
         
         
         /*
@@ -113,7 +116,7 @@ public class PeakModeling2 {
 		
 
 		/**
-		 * Measure entropy between burst and non burst features
+		 * Statistical Measures between burst against non burst features
 		 */
 		for(int ngramLength=minNGramLengthLM;ngramLength<=maxNGramLengthLM;ngramLength++){
 			LanguageModel m1 = burstLanguageModelList.get(burstLanguageModelList.indexOf(new LanguageModel(ngramLength)));
@@ -124,9 +127,10 @@ public class PeakModeling2 {
 		
 		
 		/**
-		 * Statistical Measures
+		 * Statistical Measures against the whole corpus
 		 * Get best ngrams based on Log_corpus measure
 		 */
+//		LanguageModel lang = allDocsLanguageModelList.get(burstLanguageModelList.indexOf(new LanguageModel(2)));
 //		LanguageModel lang = burstLanguageModelList.get(burstLanguageModelList.indexOf(new LanguageModel(2)));
 //		LanguageModel lang = noBurstLanguageModelList.get(noBurstLanguageModelList.indexOf(new LanguageModel(2)));
 //		peakModel.getNgramPerYearSTats(lang.getNgramList());
@@ -139,27 +143,25 @@ public class PeakModeling2 {
 		/*
 		 * VISUALIZATION BURSTS ...
 		 */
-		System.out.println("total Docs:"+peakModel.totalNumberOfRelevantDocuments+"\tBurstsDocs:"+burstDocList.size()+"\tNonBurstsDocs:"+nonBurstDocList.size());
+		Helper.displayBurstsPeriods(queryTemporalProfile);
+		System.out.println("total Docs:"+peakModel.totalNumberOfRelevantDocuments+"\tBurstsDocs:"+burstDocList.size()+"\tNonBurstsDocs:"+nonBurstDocList.size()+"\tCuttoff:"+queryTemporalProfile.getCutOffNorm());
 //		Helper.displayLanguageModelsByEntropy(burstLanguageModelList, "Burst",minNGramLengthLM,maxNGramLengthLM,20);
-		Helper.displayLanguageModelsByLogLikelihood(burstLanguageModelList,noBurstLanguageModelList, "Burst",minNGramLengthLM,maxNGramLengthLM,20);
-		
-//		Helper.displayLanguageModelsByFrequency(burstLanguageModelList, "Burst",minNGramLengthLM,maxNGramLengthLM,2000);
+		Helper.displayLanguageModelsByLogLikelihoodBurst(burstLanguageModelList,noBurstLanguageModelList, "Burst",minNGramLengthLM,maxNGramLengthLM,200);
+//		Helper.displayLanguageModelsByFrequency(burstLanguageModelList, "Burst",null,minNGramLengthLM,maxNGramLengthLM,200);
 //		Helper.displayLanguageModelsByFrequency(noBurstLanguageModelList, "Non Burst",minNGramLengthLM,maxNGramLengthLM,2000);
-//		Helper.displayLanguageModelsByFrequency(allDocsLanguageModelList, "ALL",minNGramLengthLM,maxNGramLengthLM,20000);
+//		Helper.displayLanguageModelsByFrequency(allDocsLanguageModelList, "ALL",peakModel.stopWords, minNGramLengthLM,maxNGramLengthLM,2000);
 		
-//		Helper.displayBurstsPeriods(queryTemporalProfile);
 //        Helper.displayBurstsDocuments(queryTemporalProfile, peakModel.documentList);
 //        Helper.displayNoBurstsDocuments(queryTemporalProfile, peakModel.documentList);
 //		displayGeneral(allDocsLanguageModelList, queryTemporalProfile);
 
 		
-		
-		
-		//Test Back OFF model
-		LanguageModel biggerLangModel = burstLanguageModelList.get(burstLanguageModelList.indexOf(new LanguageModel(maxNGramLengthLM)));
-		for(NGram ngram:biggerLangModel.getNgramList())
-			Test.calculateLogLikelihoofBasedOnBackOffModel(ngram, burstLanguageModelList);
-		Helper.displayLanguageModelsByLogLikelihood(burstLanguageModelList,noBurstLanguageModelList, "Burst",minNGramLengthLM,maxNGramLengthLM,20);
+		/**
+		 * Back off model log likelihood
+		 */
+		peakModel.measureSignificanceBasedOnBackOffModel(burstLanguageModelList, maxNGramLengthLM, minNGramLengthLM);
+		Helper.displayLanguageModelsByLogLikelihoodBurst(burstLanguageModelList,noBurstLanguageModelList, "Burst",minNGramLengthLM,maxNGramLengthLM,200);
+
 
 		
 		
@@ -174,8 +176,20 @@ public class PeakModeling2 {
         //========================================================== End Main ==========================================================//
 	}
 	
-	
-	
+	/**
+	 * Measure ngram significance based on sub-ngrams scores that includes(back-off model)
+	 * @param burstLanguageModelList
+	 * @param maxNGramLengthLM
+	 * @param minNGramLengthLM
+	 */
+	public void measureSignificanceBasedOnBackOffModel(List<LanguageModel> burstLanguageModelList , int maxNGramLengthLM,int minNGramLengthLM){
+		//Test Back OFF model; we need to start from the bigger one to smaller one model!!!Otherwise we use the new feature weights!
+		for(int ngramLength=maxNGramLengthLM;ngramLength>=minNGramLengthLM;ngramLength--){
+			LanguageModel m1 = burstLanguageModelList.get(burstLanguageModelList.indexOf(new LanguageModel(ngramLength)));
+			for(NGram ngram:m1.getNgramList())
+				ngram.calculateLogLikelihoofBasedOnBackOffModel( burstLanguageModelList);
+		}
+	}
 	
 	/**
 	 * Measure for each ngram in burst model its relative entropy to non-burst model
@@ -207,11 +221,16 @@ public class PeakModeling2 {
 		int totalNgramFreqBothModels = totalNgramFreqM1 + totalNgramFreqM2;
 		List<NGram> m2NGramList = M2.getNgramList();
 		for(NGram ngram : M1.getNgramList()){
+			double p_w1 = ngram.getP_w_language_model();
+			double p_w2 = 0.0;
 			int a = ngram.getTf_query_peak();
 			int b = 0;
 			int indexOfCurrentNGramInM2 = m2NGramList.indexOf(ngram);
-			if(indexOfCurrentNGramInM2 != -1)
-				b = m2NGramList.get(indexOfCurrentNGramInM2).getTf_query_peak();
+			if(indexOfCurrentNGramInM2 != -1){
+				NGram ng2=m2NGramList.get(indexOfCurrentNGramInM2);
+				b = ng2.getTf_query_peak();
+				p_w2 = ng2.getP_w_language_model();
+			}
 
 			double E1 = (double)totalNgramFreqM1 * (a+b) / totalNgramFreqBothModels;
 			double E2 = (double)totalNgramFreqM2 * (a+b) / totalNgramFreqBothModels;
@@ -224,7 +243,7 @@ public class PeakModeling2 {
 //			int c = totalNgramFreqM1 - a;
 //			int d = totalNgramFreqM2 - b;
 //			double LOG_Likelyhood_burst = 2 * (a * Helper.log2(a) + b * Helper.log2(b) + c * Helper.log2(c) + d * Helper.log2(d) - (a + b) * Helper.log2(a + b) - (a + c) * Helper.log2(a + c) - (b + d) * Helper.log2(b + d) - (c + d) * Helper.log2(c + d)+ (a + b + c + d)* Helper.log2(a + b + c + d));
-			if(a<b)
+			if(p_w1<p_w2)
 				LOG_Likelyhood_burst *= -1;
 			ngram.setLOG_Likelyhood_burst(LOG_Likelyhood_burst);
 		}
@@ -247,11 +266,12 @@ public class PeakModeling2 {
     	this.N_query_peakPeriod = Helper.removeNgramsWithNoOccurenceInNGramIndex(ngramList, finalNGramList);
     	PeakModeling.calculateProbabilitiesAndMeasures(finalNGramList, null, minN, N_corpus, N_query_peakPeriod, N_peak, N_years, maxTF_query_peak);
 
+    	//Display top N based on Log Corpus
     	Collections.sort(finalNGramList, NGram.COMPARATOR_LOG_CORPUS);
     	int c=0;
        	for(NGram ng:finalNGramList){
-       		System.out.println(ng.getNgram()+"\t"+ng.getTf_query_peak()+"\t"+ng.getP_w_language_model());
-       		if(c++ > 20)
+       		System.out.println(ng.getNgram()+"\t"+ng.getTf_query_peak()+"\t"+ng.getLOG_Likelyhood_corpus());
+       		if(c++ > 200)
        			break;
        	}
 	}
@@ -429,13 +449,14 @@ public class PeakModeling2 {
 	 */
 	public  List<KbDocument> getBurstsDocumentsList(FeatureTemporalProfile featureTemporalProfile){
 		List<KbDocument> documentBurstList = new ArrayList<KbDocument>();
-        for(Burst burst:featureTemporalProfile.getBurstList()){
-        	Set<String> burstYearSet = burst.getDateSet();        	
-			for(KbDocument kb : this.documentList){
-				if(burstYearSet.contains(kb.getDate()))
-					documentBurstList.add(kb);
-			}
-        }
+		Set<String> allBurstYearSet = new HashSet<String>();
+        for(Burst burst:featureTemporalProfile.getBurstList())
+        	allBurstYearSet.addAll(burst.getDateSet());
+//        allBurstYearSet.add("1965-06-28");
+		for(KbDocument kb : this.documentList){
+			if(allBurstYearSet.contains(kb.getDate()))
+				documentBurstList.add(kb);
+		}
         return documentBurstList;
 	}
 	/**
@@ -575,19 +596,23 @@ public class PeakModeling2 {
 	}
 	
 	public static void displayGeneral(List<LanguageModel> allDocsLanguageModelList, FeatureTemporalProfile queryTemporalProfile){
-		LanguageModel lang = allDocsLanguageModelList.get(allDocsLanguageModelList.indexOf(new LanguageModel(4)));
-		NGram door_philip = lang.getNgramList().get(lang.getNgramList().indexOf(new NGram("door philip van tijn","title")));
-		NGram door_frits = lang.getNgramList().get(lang.getNgramList().indexOf(new NGram("door frits van der","title")));
 
-		for(Map.Entry<String,Integer> entry:queryTemporalProfile.getFeatureDocFreqPerDayMap().entrySet()){
-			int ngDf = 0;
-			int ngDf2 = 0;
-			if(door_philip.getDocFreqPerDayMap().containsKey(entry.getKey()))
-				ngDf = door_philip.getDocFreqPerDayMap().get(entry.getKey());
-			if(door_frits.getDocFreqPerDayMap().containsKey(entry.getKey()))
-				ngDf2 = door_frits.getDocFreqPerDayMap().get(entry.getKey());
-
-			System.out.println(entry.getKey()+"\t"+entry.getValue()+"\t"+ngDf+"\t"+ngDf2);
+		Set<String> allBurstYearSet = queryTemporalProfile.getAllBurstDatesSet();
+		LinkedHashMap<String, Double> maMap = queryTemporalProfile.getMovingAvgNormMap();
+		Map<String,Integer> queryDofFreqMap = queryTemporalProfile.getFeatureDocFreqPerDayMap();
+		long totalQueryFr = Burstiness.totalFeatureFrequencies(queryDofFreqMap);
+		for(Map.Entry<String,Double> entry:maMap.entrySet()){
+			String date = entry.getKey();
+			double MA = 0.0;
+			double nonBurst =0.0;
+			double queryDF=0.0;
+			if(queryDofFreqMap.containsKey(date.split(",")[0]))
+				queryDF = (double)queryDofFreqMap.get(date.split(",")[0])/totalQueryFr;
+			if(allBurstYearSet.contains(date.split(",")[0]))
+				MA = entry.getValue();
+			else
+				nonBurst = queryDF;
+			System.out.println(date.split(",")[0]+"\t"+queryDF+"\t"+MA+"\t"+nonBurst);
 		}
 
 	}

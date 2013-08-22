@@ -1,6 +1,7 @@
 package org.peakModel.java.peakModel.burstiness;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +40,17 @@ public class FeatureTemporalProfile {
         	Set<String> burstYearSet = burst.getDateSet();
         	burst.setTotalNumberOfDocs(getTotalNumberOfDocsOnGivenInterval(burstYearSet));
         }	
+	}
+	
+	/**
+	 * 
+	 * @return set of all the burst dates of this feature
+	 */
+	public Set<String> getAllBurstDatesSet(){
+		Set<String> allBurstYearSet = new HashSet<String>();
+        for(Burst burst:this.burstList)
+        	allBurstYearSet.addAll(burst.getDateSet());
+        return allBurstYearSet;
 	}
 	
 	/**

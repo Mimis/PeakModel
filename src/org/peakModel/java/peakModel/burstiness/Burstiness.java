@@ -90,7 +90,7 @@ public class Burstiness {
 	 * @return
 	 * @throws ParseException
 	 */
-	public static FeatureTemporalProfile measureBurstinessForPeakYearMovingAverage(String peakYear,Map<String,Integer> featureDocFreqPerDayMap, int timeSpan) throws ParseException {
+	public static FeatureTemporalProfile measureBurstinessForPeakYearMovingAverage(String peakYear,Map<String,Integer> featureDocFreqPerDayMap, int timeSpan,double x) throws ParseException {
 		String startDate= peakYear+"-01-01";
 		String endDate= peakYear+"-12-31";
 		List<String> dateList = DateIterator.getDatesForGivenInterval(startDate, endDate);
@@ -115,15 +115,15 @@ public class Burstiness {
 			movingAvgNormMap.put(currentDateInterval.toString(), currentMovingAvgNormalized);
 		}
 		int timeWindows = movingAvgNormMap.size();
-		double cutOffNorm = getCutOff(sumUpMovingAngNorm, timeWindows, movingAvgNormMap);
+		double cutOffNorm = getCutOff(sumUpMovingAngNorm, timeWindows, movingAvgNormMap,x);
 		return new FeatureTemporalProfile(cutOffNorm, movingAvgNormMap, featureDocFreqPerDayMap);
 	}
 
 	
-	private static double getCutOff(double sumUpMovingAng,int timeWindows,LinkedHashMap<String,Double> movingAvgOnlyMap){
+	private static double getCutOff(double sumUpMovingAng,int timeWindows,LinkedHashMap<String,Double> movingAvgOnlyMap,double x){
 		double mean = (double)sumUpMovingAng / timeWindows;
 		double stand = getStandardDeviation(movingAvgOnlyMap, mean,timeWindows);
-		double cutOff = mean + (2 * stand);
+		double cutOff = mean + (x * stand);
 		return cutOff;
 	}
 	private static double getStandardDeviation(LinkedHashMap<String,Double> movingAvgOnlyMap,double mean,int timeWindows){
