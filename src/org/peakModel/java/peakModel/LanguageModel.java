@@ -55,6 +55,10 @@ public class LanguageModel {
 		Collections.sort(this.ngramList,NGram.COMPARATOR_TOTAL_TF);
 		return this.ngramList.subList(0, this.ngramList.size() < topN ? this.ngramList.size() : topN);
 	}
+	public List<NGram> getTopTFIDFpeak_yearNgrams(int topN) {
+		Collections.sort(this.ngramList,NGram.COMPARATOR_TF_IDF_peak_year);
+		return this.ngramList.subList(0, this.ngramList.size() < topN ? this.ngramList.size() : topN);
+	}
 	
 	public List<NGram> getTopEntropyNgrams(int topN) {
 		Collections.sort(this.ngramList,NGram.COMPARATOR_ENTROPY);
@@ -62,6 +66,10 @@ public class LanguageModel {
 	}
 	public List<NGram> getTopLogBurstNgrams(int topN) {
 		Collections.sort(this.ngramList,NGram.COMPARATOR_LOG_LIKELIHOOD_BURST);
+		return this.ngramList.subList(0, this.ngramList.size() < topN ? this.ngramList.size() : topN);
+	}
+	public List<NGram> getTopLogCorpusNgrams(int topN) {
+		Collections.sort(this.ngramList,NGram.COMPARATOR_LOG_CORPUS);
 		return this.ngramList.subList(0, this.ngramList.size() < topN ? this.ngramList.size() : topN);
 	}
 

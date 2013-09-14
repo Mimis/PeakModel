@@ -13,19 +13,23 @@ public class KbDocument {
 	private final String title;
 	private final String date;
 	private final String url;
-
+	private final int rank;
+	
 	private final double score;
 	private final Set<String> tokenSet; //set because we wanna only unique tokens;we count document frequency only
 	private double cosineSimilarity;
 	private Set<NGram> ngramHitsList;
 	private Set<NGram> ngramBurstyList;
+	private int hitCounts;
+
+
 
 	/**
 	 * @param id
 	 * @param tokenList
 	 * @param cosineSimilarity
 	 */
-	public KbDocument(int id,String title, List<String> tokenList,String date,String url,double score) {
+	public KbDocument(int id,String title, List<String> tokenList,String date,String url,double score,int rank) {
 		super();
 		this.title = title;
 		this.id = id;
@@ -33,12 +37,38 @@ public class KbDocument {
 		this.url = url;
 		this.tokenSet = new HashSet<String>(tokenList);
 		this.cosineSimilarity = 0.0;
+		this.hitCounts = 0;
 		this.score = score;
+		this.rank = rank;
 		this.ngramBurstyList = new HashSet<NGram>();
 	}
 	
 	
 	
+	/**
+	 * @return the hitCounts
+	 */
+	public int getHitCounts() {
+		return hitCounts;
+	}
+
+	/**
+	 * @param hitCounts the hitCounts to set
+	 */
+	public void setHitCounts(int hitCounts) {
+		this.hitCounts = hitCounts;
+	}
+
+
+	/**
+	 * @return the rank
+	 */
+	public int getRank() {
+		return rank;
+	}
+
+
+
 	/**
 	 * @return the tokenSet
 	 */
@@ -126,12 +156,12 @@ public class KbDocument {
         }
     };
 
-	public static Comparator<KbDocument> COMPARATOR_BURSTINESS = new Comparator<KbDocument>()
+	public static Comparator<KbDocument> COMPARATOR_HITS = new Comparator<KbDocument>()
     {
         public int compare(KbDocument o1, KbDocument o2){
-            if(o2.ngramBurstyList.size() > o1.ngramBurstyList.size() )
+            if(o2.hitCounts > o1.hitCounts )
             	return 1;
-            else if(o2.ngramBurstyList.size() < o1.ngramBurstyList.size() )
+            else if(o2.hitCounts < o1.hitCounts )
             	return 0;
             else 
             	return 0;

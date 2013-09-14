@@ -1,6 +1,8 @@
 package org.peakModel.java.peakModel;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -79,5 +81,58 @@ public class PeakModelWithDocumentSimilarity {
 		for(String token : kbDocument.getTokenSet())
 			normalizedDocument += Math.pow(1,2);		
 		return Math.sqrt(normalizedDocument);
+	}
+	
+	
+	/**
+	 * %%%%%%%%%%%  compute similarity between documents  %%%%%%%%%%%
+	 * cosine,tf-idf_peakYear,stopwords,unigrams
+	 * @param documentList
+	 * @param languageModelList
+	 * @param stopWordsList
+	 * @return
+	 */
+	public static double[][] computeDocumentsSimMatrix(List<KbDocument> documentList,LanguageModel languageModelList,List<String> stopWordsList){
+		int nrOfDocs = documentList.size();
+		double[][] distances = new double[nrOfDocs][nrOfDocs];
+		for(int i=0;i<nrOfDocs;i++){
+			Set<String> doc1 = documentList.get(i).getTokenSet();
+			for(int y=0;y<nrOfDocs;y++){
+				Set<String> doc2 = documentList.get(y).getTokenSet();
+				double cosine = cosine(doc1, doc2, languageModelList,stopWordsList);
+				distances[i][y] = cosine;
+			}
+		}
+		return distances;
+	}
+	private static double cosine(Set<String> doc1,Set<String> doc2,LanguageModel languageModelList,List<String> stopWordsList){
+		//Compute vectors...
+		Set<String> all = new HashSet<String>();all.addAll(doc1);all.addAll(doc2);
+		List<Double> v1 = new ArrayList<Double>();
+		List<Double> v2 = new ArrayList<Double>();
+		for(String ng:all){
+			if(stopWordsList.contains(ng))
+				continue;
+			NGram ngram = languageModelList.getNgram(ng, "title");
+			double tfidf=ngram.getTF_IDF_peak_year();
+			if(doc1.contains(ng)) v1.add(tfidf); else v1.add(0.0);
+			if(doc2.contains(ng)) v2.add(tfidf); else v2.add(0.0);
+		}
+		//compute numerator
+		double num = 0.0;
+		for(int i=0;i<v1.size();i++)
+			num += v1.get(i) * v2.get(i);
+		//normalized vector
+		double nv1 = getNormVector(v1);
+		double nv2 = getNormVector(v2);
+		//cosine
+		return (double)num / (nv1*nv2);
+	}
+
+	private static double getNormVector(List<Double> vector){
+		double normalizedV = 0.0;
+		for(Double v:vector)
+			normalizedV+=Math.pow(v,2);
+		return Math.sqrt(normalizedV);
 	}
 }

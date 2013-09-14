@@ -204,7 +204,7 @@ public class PeakModeling {
 					//this the candidate keyphrases
 					tokenList = Helper.keepOnlyBigramsFromList(tokenList);				
 				}
-				documentList.add(new KbDocument(docId, title,tokenList,docDate,url,hits[i].score));
+				documentList.add(new KbDocument(docId, title,tokenList,docDate,url,hits[i].score,i+1));
 				Helper.mapTokenListToNGramList(tokenList,docDate, "title", ngramList);
 				
 				

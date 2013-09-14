@@ -25,7 +25,7 @@ public class Clustering {
 				finalClusterList.add(cluster);
 			}
 		}
-		
+		//calculate avg score based on the doc's score that each cluster includes..
 		for(Cluster cluster : finalClusterList)
 			cluster.calculateAvgScore();
 		return finalClusterList;
@@ -48,7 +48,11 @@ public class Clustering {
 		return previousGroupedClusterIndexes;
 	}
 	
-	
+	/**
+	 * 
+	 * @param documentList
+	 * @return list of cluster docs which include identical ngram hits
+	 */
 	private static List<Cluster> clusterDocsBasedOnNGramHits(List<KbDocument> documentList){
 		List<Cluster> clusterList = new ArrayList<Cluster>();
 		for(KbDocument kb : documentList){

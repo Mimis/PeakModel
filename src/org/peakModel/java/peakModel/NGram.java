@@ -37,6 +37,8 @@ public class NGram {
 	private double P_w_Given_time; 
 	//statistical measures
 	private double MY_APPROACH;
+	private double TF_IDF_peak_year;
+	private double IDF_peak_year;
 	private double TF_IDF;
 	private double IDF; //idf per year appearance:measures how rare is the ngram!
 	private double phraseness; //measures how likely the terms fo the ngram to appear together..can be evaluated on foreground or background corpus
@@ -67,10 +69,42 @@ public class NGram {
 	
 
 	/**
+	 * @return the iDF_peak_year
+	 */
+	public double getIDF_peak_year() {
+		return IDF_peak_year;
+	}
+
+
+	/**
+	 * @param iDF_peak_year the iDF_peak_year to set
+	 */
+	public void setIDF_peak_year(double iDF_peak_year) {
+		IDF_peak_year = iDF_peak_year;
+	}
+
+
+	/**
 	 * @return the lOG_Likelyhood_burst
 	 */
 	public double getLOG_Likelyhood_burst() {
 		return LOG_Likelyhood_burst;
+	}
+
+
+	/**
+	 * @return the tF_IDF_peak_year
+	 */
+	public double getTF_IDF_peak_year() {
+		return TF_IDF_peak_year;
+	}
+
+
+	/**
+	 * @param tF_IDF_peak_year the tF_IDF_peak_year to set
+	 */
+	public void setTF_IDF_peak_year(double tF_IDF_peak_year) {
+		TF_IDF_peak_year = tF_IDF_peak_year;
 	}
 
 
@@ -862,11 +896,11 @@ public class NGram {
 	 * Calculate log likelihood via a back off model approach;add the scores of the sub-ngrams that include this ngram
 	 * @param languageModelList
 	 */
-	public  void calculateLogLikelihoofBasedOnBackOffModel(List<LanguageModel> languageModelList){
+	public  void calculateLogLikelihoofBasedOnBackOffModel(List<LanguageModel> languageModelList,int minNgramLevelForScoreConsideration){
 		double finalLogLikelihood = getLOG_Likelyhood_burst();
 		
 		String unigrams[] = this.ngram.split(" ");
-		for(int ngramLevel=unigrams.length-1;ngramLevel>0;ngramLevel--){
+		for(int ngramLevel=unigrams.length-1;ngramLevel>=minNgramLevelForScoreConsideration;ngramLevel--){
 			LanguageModel langModel = languageModelList.get(languageModelList.indexOf(new LanguageModel(ngramLevel)));
 			finalLogLikelihood += getLogLikeihoodOfSubNgrams(unigrams, langModel, ngramLevel);
 		}
@@ -1044,9 +1078,9 @@ public class NGram {
 	public static Comparator<NGram> COMPARATOR_ENTROPY = new Comparator<NGram>()
     {
         public int compare(NGram o1, NGram o2){
-            if(o2.Relative_Entropy > o1.Relative_Entropy )
+            if(o2.Relative_Entropy < o1.Relative_Entropy )
             	return 1;
-            else if(o2.Relative_Entropy < o1.Relative_Entropy )
+            else if(o2.Relative_Entropy > o1.Relative_Entropy )
             	return 0;
             else 
             	return 0;
@@ -1262,7 +1296,7 @@ public class NGram {
     };
 
     /**
-     * SORT BY TF-IDF
+     * SORT BY TF-IDF corpus
      */
     public static Comparator<NGram> COMPARATOR_TF_IDF = new Comparator<NGram>()
     {
@@ -1270,6 +1304,21 @@ public class NGram {
              if(o2.TF_IDF > o1.TF_IDF )
              	return 1;
              else if(o2.TF_IDF < o1.TF_IDF )
+             	return 0;
+             else 
+             	return 0;
+         }
+    };
+
+    /**
+     * SORT BY TF-IDF peakYear
+     */
+    public static Comparator<NGram> COMPARATOR_TF_IDF_peak_year = new Comparator<NGram>()
+    {
+    	 public int compare(NGram o1, NGram o2){
+             if(o2.TF_IDF_peak_year > o1.TF_IDF_peak_year )
+             	return 1;
+             else if(o2.TF_IDF_peak_year < o1.TF_IDF_peak_year )
              	return 0;
              else 
              	return 0;

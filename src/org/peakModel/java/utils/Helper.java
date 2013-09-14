@@ -26,26 +26,61 @@ import org.peakModel.java.peakModel.document_process.KbDocument;
 
 public class Helper {
 
-	public static void displayLanguageModelsByFrequency(List<LanguageModel> languageModelList,String name,List<String> stopWordsList,int minLength,int maxLength,int topN){
+	public static void displayLanguageModelsByTFIDFpeak_year(List<LanguageModel> languageModelList,List<LanguageModel> negLanguageModelList, String name,List<String> stopWordsList,int minLength,int maxLength,int topN){
 		for(int ngramLength=minLength;ngramLength<=maxLength;ngramLength++){
 			LanguageModel lang = languageModelList.get(languageModelList.indexOf(new LanguageModel(ngramLength)));
+			LanguageModel negLang = negLanguageModelList.get(negLanguageModelList.indexOf(new LanguageModel(ngramLength)));
+
 			System.out.println("\n\n#"+name+":"+lang.toString());
-			for(NGram ng:lang.getTopFrequentNgrams(topN)){
+			for(NGram ng:lang.getTopTFIDFpeak_yearNgrams(topN)){
+				int negLMngram = 0;
+				if(negLang.getNgramList().contains(ng))
+					negLMngram = negLang.getNgramList().get(negLang.getNgramList().indexOf(ng)).getTf_query_peak();
+
 				if(stopWordsList!=null){
 					if(!stopWordsList.contains(ng.getNgram()))
-						System.out.println(ng.getNgram()+"\t"+ng.getTf_query_peak());//+"\t"+ng.getP_w_language_model());//+"\n\t"+ng.getDocFreqPerDayMap().toString());
+						System.out.println(ng.getNgram()+"\tNrOfDaysAppear:"+ng.getDocFreqPerDayMap().size()+"\tTF:"+ng.getTf_query_peak()+"\tTFIDF:"+ng.getTF_IDF_peak_year());
 				}
 				else
-					System.out.println(ng.getNgram()+"\t"+ng.getTf_query_peak());//+"\t"+ng.getP_w_language_model());//+"\n\t"+ng.getDocFreqPerDayMap().toString());
+					System.out.println(ng.getNgram()+"\tNrOfDaysAppear:"+ng.getDocFreqPerDayMap().size()+"\tTF:"+ng.getTf_query_peak()+"\tTFIDF:"+ng.getTF_IDF_peak_year());
+
 			}
 		}
 	}
-	public static void displayLanguageModelsByEntropy(List<LanguageModel> languageModelList,String name,int minLength,int maxLength,int topN){
+
+	public static void displayLanguageModelsByFrequency(List<LanguageModel> languageModelList,List<LanguageModel> negLanguageModelList, String name,List<String> stopWordsList,int minLength,int maxLength,int topN){
 		for(int ngramLength=minLength;ngramLength<=maxLength;ngramLength++){
 			LanguageModel lang = languageModelList.get(languageModelList.indexOf(new LanguageModel(ngramLength)));
+			LanguageModel negLang = negLanguageModelList.get(negLanguageModelList.indexOf(new LanguageModel(ngramLength)));
+
 			System.out.println("\n\n#"+name+":"+lang.toString());
-			for(NGram ng:lang.getTopEntropyNgrams(topN))
-				System.out.println(ng.getNgram()+"\t"+ng.getTf_query_peak()+"\t"+ng.getP_w_language_model()+"\t"+ng.getLOG_Likelyhood_burst());
+			for(NGram ng:lang.getTopFrequentNgrams(topN)){
+				int negLMngram = 0;
+				if(negLang.getNgramList().contains(ng))
+					negLMngram = negLang.getNgramList().get(negLang.getNgramList().indexOf(ng)).getTf_query_peak();
+
+				if(stopWordsList!=null){
+					if(!stopWordsList.contains(ng.getNgram()))
+						System.out.println(ng.getNgram()+"\tNrOfDaysAppear:"+ng.getDocFreqPerDayMap().size()+"\tTF:"+ng.getTf_query_peak()+"\tnegTF:"+negLMngram+"\tLogBurst:"+ng.getLOG_Likelyhood_burst()+"\tLogCorpus:"+ng.getLOG_Likelyhood_corpus());
+				}
+				else
+					System.out.println(ng.getNgram()+"\tNrOfDaysAppear:"+ng.getDocFreqPerDayMap().size()+"\tTF:"+ng.getTf_query_peak()+"\tnegTF:"+negLMngram+"\tLogBurst:"+ng.getLOG_Likelyhood_burst()+"\tLogCorpus:"+ng.getLOG_Likelyhood_corpus());
+
+			}
+		}
+	}
+	public static void displayLanguageModelsByEntropy(List<LanguageModel> languageModelList,List<LanguageModel> negLanguageModelList,String name,int minLength,int maxLength,int topN){
+		for(int ngramLength=minLength;ngramLength<=maxLength;ngramLength++){
+			LanguageModel lang = languageModelList.get(languageModelList.indexOf(new LanguageModel(ngramLength)));
+			LanguageModel negLang = negLanguageModelList.get(negLanguageModelList.indexOf(new LanguageModel(ngramLength)));
+			System.out.println("\n\n#"+name+":"+lang.toString());
+			for(NGram ng:lang.getTopEntropyNgrams(topN)){
+				int negLMngram = 0;
+				if(negLang.getNgramList().contains(ng))
+					negLMngram = negLang.getNgramList().get(negLang.getNgramList().indexOf(ng)).getTf_query_peak();
+
+				System.out.println(ng.getNgram()+"\t"+ng.getTf_query_peak()+"\t"+negLMngram+"\t"+ng.getP_w_language_model()+"\tEntropy:"+ng.getRelative_Entropy());
+			}
 		}
 	}
 
@@ -59,7 +94,22 @@ public class Helper {
 				int negLMngram = 0;
 				if(negLang.getNgramList().contains(ng))
 					negLMngram = negLang.getNgramList().get(negLang.getNgramList().indexOf(ng)).getTf_query_peak();
-				System.out.println(ng.getNgram()+"\t"+ng.getTf_query_peak()+"\t"+negLMngram+"\t"+ng.getP_w_language_model()+"\t"+ng.getLOG_Likelyhood_burst());
+				System.out.println(ng.getNgram()+"\tNrOfDaysAppear:"+ng.getDocFreqPerDayMap().size()+"\tTF:"+ng.getTf_query_peak()+"\tTFIDFpeak:"+ng.getTF_IDF_peak_year()+"\tnegTF:"+negLMngram+"\tLogBurst:"+ng.getLOG_Likelyhood_burst()+"\tLogCorpus:"+ng.getLOG_Likelyhood_corpus());
+			}
+		}
+	}
+
+	public static void displayLanguageModelsByLogLikelihoodCorpus(List<LanguageModel> languageModelList,List<LanguageModel> negLanguageModelList,String name,int minLength,int maxLength,int topN){
+		for(int ngramLength=minLength;ngramLength<=maxLength;ngramLength++){
+			LanguageModel lang = languageModelList.get(languageModelList.indexOf(new LanguageModel(ngramLength)));
+			LanguageModel negLang = negLanguageModelList.get(negLanguageModelList.indexOf(new LanguageModel(ngramLength)));
+
+			System.out.println("\n\n#"+name+":"+lang.toString());
+			for(NGram ng:lang.getTopLogCorpusNgrams(topN)){
+				int negLMngram = 0;
+				if(negLang.getNgramList().contains(ng))
+					negLMngram = negLang.getNgramList().get(negLang.getNgramList().indexOf(ng)).getTf_query_peak();
+				System.out.println(ng.getNgram()+"\tNrOfDaysAppear:"+ng.getDocFreqPerDayMap().size()+"\tTF:"+ng.getTf_query_peak()+"\tnegTF:"+negLMngram+"\tLogBurst:"+ng.getLOG_Likelyhood_burst()+"\tLogCorpus:"+ng.getLOG_Likelyhood_corpus());
 			}
 		}
 	}
