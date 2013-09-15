@@ -29,13 +29,9 @@ public class Helper {
 	public static void displayLanguageModelsByTFIDFpeak_year(List<LanguageModel> languageModelList,List<LanguageModel> negLanguageModelList, String name,List<String> stopWordsList,int minLength,int maxLength,int topN){
 		for(int ngramLength=minLength;ngramLength<=maxLength;ngramLength++){
 			LanguageModel lang = languageModelList.get(languageModelList.indexOf(new LanguageModel(ngramLength)));
-			LanguageModel negLang = negLanguageModelList.get(negLanguageModelList.indexOf(new LanguageModel(ngramLength)));
 
 			System.out.println("\n\n#"+name+":"+lang.toString());
 			for(NGram ng:lang.getTopTFIDFpeak_yearNgrams(topN)){
-				int negLMngram = 0;
-				if(negLang.getNgramList().contains(ng))
-					negLMngram = negLang.getNgramList().get(negLang.getNgramList().indexOf(ng)).getTf_query_peak();
 
 				if(stopWordsList!=null){
 					if(!stopWordsList.contains(ng.getNgram()))
@@ -47,6 +43,7 @@ public class Helper {
 			}
 		}
 	}
+	
 
 	public static void displayLanguageModelsByFrequency(List<LanguageModel> languageModelList,List<LanguageModel> negLanguageModelList, String name,List<String> stopWordsList,int minLength,int maxLength,int topN){
 		for(int ngramLength=minLength;ngramLength<=maxLength;ngramLength++){

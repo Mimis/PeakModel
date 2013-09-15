@@ -142,7 +142,7 @@ public class PeakModeling2 {
 			peakModel.measureSignificanceOfTermsInBurstAgainstNonBurstDocs(m1, m2);
 		}
 		//measure Tf Idf based on the number of days appera durring the peak year
-		peakModel.measureTF_IDf(minNGramLengthLM, maxNGramLengthLM, allDocsLanguageModelList, burstLanguageModelList);
+		peakModel.measureTF_IDf_basedOnDaysInPeakYear(minNGramLengthLM, maxNGramLengthLM, allDocsLanguageModelList, burstLanguageModelList);
         System.out.println("#Total Statistical Measures run time:"+ (System.currentTimeMillis()-startTime)/1000);
 
 		
@@ -152,10 +152,10 @@ public class PeakModeling2 {
 		 * Statistical Measures against the whole corpus
 		 * Get best ngrams based on Log_corpus measure
 		 */
-		LanguageModel lang = allDocsLanguageModelList.get(burstLanguageModelList.indexOf(new LanguageModel(minN)));
+//		LanguageModel lang = allDocsLanguageModelList.get(burstLanguageModelList.indexOf(new LanguageModel(minN)));
 //		LanguageModel lang = burstLanguageModelList.get(burstLanguageModelList.indexOf(new LanguageModel(minN)));
 //		LanguageModel lang = noBurstLanguageModelList.get(noBurstLanguageModelList.indexOf(new LanguageModel(minN)));
-		peakModel.getNgramPerYearSTats(lang.getNgramList(),25);
+//		peakModel.getNgramPerYearSTats(lang.getNgramList(),25);
 		
 		
 
@@ -165,7 +165,7 @@ public class PeakModeling2 {
 		/*
 		 * VISUALIZATION BURSTS ...
 		 */
-        //visualization(peakModel, queryTemporalProfile, burstDocList, nonBurstDocList, burstLanguageModelList, noBurstLanguageModelList,allDocsLanguageModelList, minNGramLengthLM, maxNGramLengthLM);
+        visualization(peakModel, queryTemporalProfile, burstDocList, nonBurstDocList, burstLanguageModelList, noBurstLanguageModelList,allDocsLanguageModelList, minNGramLengthLM, maxNGramLengthLM);
         
         
 		/**
@@ -189,24 +189,24 @@ public class PeakModeling2 {
         /**
          * 1. HITS count Explanation Generation: top N UNIGRAMS, no StopWords and Query Keywords
          */
-		int featureType = 1;
+//		int featureType = 1;
 		
-		//*Use the top N unigrams based on LOG corpus without StopWords and query tokens
+		//*CHOOSE FROM WHICH MODEL WE WILL GENERATE EXPLANATION
 //		LanguageModel LM = allDocsLanguageModelList.get(allDocsLanguageModelList.indexOf(new LanguageModel(featureType)));
+//		LanguageModel LM = burstLanguageModelList.get(burstLanguageModelList.indexOf(new LanguageModel(featureType)));
+		
+		//*CHOOSE TOP FEATURES BASED ON GIVEN MEASURE(for log_corpus we need global feature statistics)
+//		List<String> topFeatureList = peakModel.getTopFeatures(LM, 25,NGram.COMPARATOR_LOG_LIKELIHOOD_BURST);
+//		List<String> topFeatureList = peakModel.getTopFeatures(LM, 25,NGram.COMPARATOR_TF_IDF_peak_year);
 //		List<String> topFeatureList = peakModel.getTopFeatures(LM, 25,NGram.COMPARATOR_LOG_CORPUS);
+
+		//generate explanations...
 //		peakModel.explanationGenerationHITS(topFeatureList);
 		
-		//*Use the top N unigrma based on Burst Log likelihood without StopWords and query tokens
-		LanguageModel LM = burstLanguageModelList.get(burstLanguageModelList.indexOf(new LanguageModel(featureType)));
-		List<String> topFeatureList = peakModel.getTopFeatures(LM, 25,NGram.COMPARATOR_LOG_LIKELIHOOD_BURST);
-		for(String f: topFeatureList)
-			System.out.println("\t"+f);
-		peakModel.explanationGenerationHITS(topFeatureList);
-		
 		//display
-		Collections.sort(peakModel.documentList,KbDocument.COMPARATOR_HITS);
-		for(KbDocument doc:peakModel.documentList)
-			System.out.println(doc.getHitCounts()+"\t"+doc.getTitle());
+//		Collections.sort(peakModel.documentList,KbDocument.COMPARATOR_HITS);
+//		for(KbDocument doc:peakModel.documentList)
+//			System.out.println(doc.getHitCounts()+"\t"+doc.getTitle());
 		
 		
 		
@@ -225,7 +225,13 @@ public class PeakModeling2 {
 
 	
 	
-	
+	/**
+	 * Explanation Generation..
+	 * @param LM
+	 * @param topNFeatures
+	 * @param comparator
+	 * @return
+	 */
 	public List<String> getTopFeatures(LanguageModel LM,int topNFeatures,Comparator<NGram> comparator){
 		//Get the top N features without stopWords and query tokens
         List<String> topFeatureList = new ArrayList<String>();
@@ -242,7 +248,6 @@ public class PeakModeling2 {
 		}
 		return topFeatureList;
 	}
-	
 	public void explanationGenerationHITS(List<String> topFeatureList){		
 		//count hits
 		for(KbDocument doc : documentList){
@@ -257,7 +262,7 @@ public class PeakModeling2 {
 	
 	
 	
-	
+
 	
 	
 	
@@ -267,7 +272,7 @@ public class PeakModeling2 {
 	 * @param maxNGramLengthLM
 	 * @param allDocsLanguageModelList
 	 */
-	public void measureTF_IDf(int minNGramLengthLM,int maxNGramLengthLM,List<LanguageModel> allDocsLanguageModelList,List<LanguageModel> burstLanguageModelList){
+	public void measureTF_IDf_basedOnDaysInPeakYear(int minNGramLengthLM,int maxNGramLengthLM,List<LanguageModel> allDocsLanguageModelList,List<LanguageModel> burstLanguageModelList){
 		for(int ngramLength=minNGramLengthLM;ngramLength<=maxNGramLengthLM;ngramLength++){
 			LanguageModel allLM = allDocsLanguageModelList.get(allDocsLanguageModelList.indexOf(new LanguageModel(ngramLength)));
 			LanguageModel burstLM = burstLanguageModelList.get(burstLanguageModelList.indexOf(new LanguageModel(ngramLength)));
@@ -276,12 +281,15 @@ public class PeakModeling2 {
 				int tf_query_peak_year = ng.getTf_query_peak();
 				int nr_days_appear_peak_year = ng.getDocFreqPerDayMap().size();
 				double idf = Helper.log2( ((double)365/nr_days_appear_peak_year));
-				double tf_idf = (double) (1+Helper.log2(tf_query_peak_year)) * idf;
+				double tf_idf = (double) (tf_query_peak_year) * idf;
 				ng.setTF_IDF_peak_year(tf_idf);
 				//Assign the tfidf into burst Ngram model..
 				NGram burstNgram = burstLM.getNgram(ng.getNgram(), "title");
-				if(burstNgram!=null)
+				if(burstNgram!=null){
 					burstNgram.setTF_IDF_peak_year(tf_idf);
+					//experimet measure multiply tf idf with logBurst
+//					burstNgram.setTF_IDF_peak_year(tf_idf * burstNgram.getLOG_Likelyhood_burst());
+				}
 			}
 		}
 	}
@@ -294,7 +302,7 @@ public class PeakModeling2 {
 	 * @param nonBurstDocList
 	 */
 	public static void visualization(PeakModeling2 peakModel,FeatureTemporalProfile queryTemporalProfile,List<KbDocument> burstDocList,List<KbDocument> nonBurstDocList,List<LanguageModel> burstLanguageModelList,List<LanguageModel> noBurstLanguageModelList,List<LanguageModel> allDocsLanguageModelList,int minNGramLengthLM,int maxNGramLengthLM){
-		Helper.displayBurstsPeriods(queryTemporalProfile);
+//		Helper.displayBurstsPeriods(queryTemporalProfile);
 		System.out.println("total Docs:"+peakModel.totalNumberOfRelevantDocuments+"\tBurstsDocs:"+burstDocList.size()+"\tNonBurstsDocs:"+nonBurstDocList.size()+"\tCuttoff:"+queryTemporalProfile.getCutOffNorm());
 //		Helper.displayLanguageModelsByEntropy(burstLanguageModelList,noBurstLanguageModelList, "BurstEntropy",minNGramLengthLM,maxNGramLengthLM,20);
 //		Helper.displayLanguageModelsByLogLikelihoodBurst(burstLanguageModelList,noBurstLanguageModelList, "BurstLogLikelihood",minNGramLengthLM,maxNGramLengthLM,25);
@@ -303,8 +311,7 @@ public class PeakModeling2 {
 //		Helper.displayLanguageModelsByFrequency(burstLanguageModelList, noBurstLanguageModelList,"BurstFrequency",peakModel.stopWords, minNGramLengthLM,maxNGramLengthLM,40);
 //		Helper.displayLanguageModelsByFrequency(noBurstLanguageModelList, burstLanguageModelList,"Non Burst",peakModel.stopWords,minNGramLengthLM,maxNGramLengthLM,40);
 //		Helper.displayLanguageModelsByFrequency(allDocsLanguageModelList, noBurstLanguageModelList,"ALL",peakModel.stopWords, minNGramLengthLM,maxNGramLengthLM,40);
-//		Helper.displayLanguageModelsByTFIDFpeak_year(allDocsLanguageModelList, noBurstLanguageModelList,"ALL",peakModel.stopWords, minNGramLengthLM,maxNGramLengthLM,100);
-
+		Helper.displayLanguageModelsByTFIDFpeak_year(allDocsLanguageModelList, noBurstLanguageModelList,"ALL",peakModel.stopWords, minNGramLengthLM,maxNGramLengthLM,250);
 		
 //        Helper.displayBurstsDocuments(queryTemporalProfile, peakModel.documentList);
 //        Helper.displayNoBurstsDocuments(queryTemporalProfile, peakModel.documentList);
@@ -651,11 +658,9 @@ public class PeakModeling2 {
 				 * Title
 				 */
 				final String title = doc.get("title");				
-				//final String content = doc.get("content");				
 				final String docDate = doc.get("date");
 				final String url = doc.get("url");				
 				
-
 				//Skip larger than N titles
 				List<String> tokenList = HelperLucene.tokenizeString(this.NgramAnalyzerForTokenization, title);
 				int titleTokenSize = title.split("\\s+").length;

@@ -20,36 +20,15 @@ public class Test {
 	 * @throws ParseException 
 	 */
 	public static void main(String[] args) throws IOException, ParseException {
-		String[] all = new String[12];
-		String fileToRead = "/Users/mimis/Desktop/data.txt";
-		
-		int i=0;
-		File file = new File(fileToRead);
-		try {
-			BufferedReader input = new BufferedReader(new FileReader(file));
-			try {
-				String line = null;
-				while ((line = input.readLine()) != null) {
-					if (line.length() > 0 && !line.equals("###########")){
-						if(all[i]== null)
-							all[i++] = line.trim().replaceAll("\\n", "");
-						else
-							all[i++] += "\t&\t" + line.trim().replaceAll("\\n", "");
-					}else{
-						i=0;
-					}
-				}
-			} finally {
-				input.close();
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+//?		van de	NrOfDaysAppear:8	TF:9	TFIDF:49.60577388390642
+//		de jong	NrOfDaysAppear:5	TF:8	TFIDF:49.51859647104014
 
-		
-		
-	for(String s:all)	
-		System.out.println(s+" \\\\ ");
+		int tf_query_peak_year = 8;
+		int nr_days_appear_peak_year = 5;
+		double idf = Helper.log2( ((double)365/nr_days_appear_peak_year));
+		double tf_idf = (double) (tf_query_peak_year) * idf;
+
+		System.out.println(tf_idf);
 		
 	}
 }

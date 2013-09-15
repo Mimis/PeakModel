@@ -9,6 +9,7 @@ public class LanguageModel {
 	private int totalNumberNgrams;
 	private int totalNumberOfDocuments;
 	private int totalNGramFrequency;
+	private int maxNGramFrequency;
 	
 	
 	
@@ -22,11 +23,28 @@ public class LanguageModel {
 		this.ngramList = ngramList;
 		this.totalNumberNgrams = ngramList.size();
 		this.totalNumberOfDocuments = totalNumberOfDocuments;
+		this.maxNGramFrequency=0;
 		for(NGram ng : ngramList){
 			this.totalNGramFrequency += ng.getTf_query_peak();
+			if(maxNGramFrequency<ng.getTf_query_peak())
+				maxNGramFrequency=ng.getTf_query_peak();
 			//calculate the probability to find this ngram if we select by random an item from the document set that we extract it
 			ng.setP_w_language_model((double)ng.getTf_query_peak() / this.totalNumberOfDocuments);
 		}
+	}
+
+	/**
+	 * @return the maxNGramFrequency
+	 */
+	public int getMaxNGramFrequency() {
+		return maxNGramFrequency;
+	}
+
+	/**
+	 * @param maxNGramFrequency the maxNGramFrequency to set
+	 */
+	public void setMaxNGramFrequency(int maxNGramFrequency) {
+		this.maxNGramFrequency = maxNGramFrequency;
 	}
 
 	public LanguageModel(int ngramLength) {
@@ -59,7 +77,12 @@ public class LanguageModel {
 		Collections.sort(this.ngramList,NGram.COMPARATOR_TF_IDF_peak_year);
 		return this.ngramList.subList(0, this.ngramList.size() < topN ? this.ngramList.size() : topN);
 	}
-	
+
+	public List<NGram> getTopTFIDFcorpusNgrams(int topN) {
+		Collections.sort(this.ngramList,NGram.COMPARATOR_TF_IDF);
+		return this.ngramList.subList(0, this.ngramList.size() < topN ? this.ngramList.size() : topN);
+	}
+
 	public List<NGram> getTopEntropyNgrams(int topN) {
 		Collections.sort(this.ngramList,NGram.COMPARATOR_ENTROPY);
 		return this.ngramList.subList(0, this.ngramList.size() < topN ? this.ngramList.size() : topN);
@@ -171,16 +194,18 @@ public class LanguageModel {
 			return false;
 		return true;
 	}
-	
+
 	/* (non-Javadoc)
 	 * @see java.lang.Object#toString()
 	 */
 	@Override
 	public String toString() {
-		return "LanguageModel [ngramLength=" + ngramLength
+		return "LanguageModel [ngramLength=" + ngramLength 
 				+ ", totalNumberNgrams=" + totalNumberNgrams
 				+ ", totalNumberOfDocuments=" + totalNumberOfDocuments
-				+ ", totalNGramFrequency=" + totalNGramFrequency + "]";
+				+ ", totalNGramFrequency=" + totalNGramFrequency
+				+ ", maxNGramFrequency=" + maxNGramFrequency + "]";
 	}
+	
 
 }

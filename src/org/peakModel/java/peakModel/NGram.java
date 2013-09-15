@@ -38,7 +38,6 @@ public class NGram {
 	//statistical measures
 	private double MY_APPROACH;
 	private double TF_IDF_peak_year;
-	private double IDF_peak_year;
 	private double TF_IDF;
 	private double IDF; //idf per year appearance:measures how rare is the ngram!
 	private double phraseness; //measures how likely the terms fo the ngram to appear together..can be evaluated on foreground or background corpus
@@ -68,20 +67,6 @@ public class NGram {
 	}
 	
 
-	/**
-	 * @return the iDF_peak_year
-	 */
-	public double getIDF_peak_year() {
-		return IDF_peak_year;
-	}
-
-
-	/**
-	 * @param iDF_peak_year the iDF_peak_year to set
-	 */
-	public void setIDF_peak_year(double iDF_peak_year) {
-		IDF_peak_year = iDF_peak_year;
-	}
 
 
 	/**
