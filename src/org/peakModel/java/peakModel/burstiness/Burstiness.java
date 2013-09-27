@@ -82,6 +82,37 @@ public class Burstiness {
 		return burstMap;
 	}
 	
+	public static FeatureTemporalProfile measureBurstinessWithDocScoreForPeakYearMovingAverage(String peakYear,Map<String,Float> featureDocScorePerDayMap,Map<String,Integer> featureDocFreqPerDayMap, int timeSpan,double x) throws ParseException {
+		String startDate= peakYear+"-01-01";
+		String endDate= peakYear+"-12-31";
+		List<String> dateList = DateIterator.getDatesForGivenInterval(startDate, endDate);
+		LinkedHashMap<String,Double> movingAvgNormMap = new LinkedHashMap<String,Double>();
+
+
+		double sumUpMovingAngNorm = 0.0;
+		for(int i=0;i<dateList.size();i++){
+			if(i+timeSpan > dateList.size())
+				break;
+			StringBuilder currentDateInterval = new StringBuilder();
+			currentDateInterval.append(dateList.get(i));
+			
+			double currentMAscore = (double) Helper.getScoreFromYearToTfMap(dateList.get(i), featureDocScorePerDayMap);
+			for(int y=i+1;y<i+timeSpan;y++){
+				currentMAscore += (double)Helper.getScoreFromYearToTfMap(dateList.get(y), featureDocScorePerDayMap);
+				currentDateInterval.append(","+dateList.get(y));
+			}
+			double currentMovingAvgNormalized = (double) currentMAscore / timeSpan;
+			sumUpMovingAngNorm+=currentMovingAvgNormalized;
+			movingAvgNormMap.put(currentDateInterval.toString(), currentMovingAvgNormalized);
+		}
+		int timeWindows = movingAvgNormMap.size();
+		double cutOffNorm = getCutOff(sumUpMovingAngNorm, timeWindows, movingAvgNormMap,x);
+		System.out.println("cutOffNorm:"+cutOffNorm);
+		return new FeatureTemporalProfile(cutOffNorm, movingAvgNormMap, featureDocFreqPerDayMap,featureDocScorePerDayMap);
+	}
+
+	
+	
 	/**
 	 * Measure burstiness based on Moving Average and cut off threshold based on Vlachos et.al
 	 * @param peakYear
@@ -116,11 +147,11 @@ public class Burstiness {
 		}
 		int timeWindows = movingAvgNormMap.size();
 		double cutOffNorm = getCutOff(sumUpMovingAngNorm, timeWindows, movingAvgNormMap,x);
-		return new FeatureTemporalProfile(cutOffNorm, movingAvgNormMap, featureDocFreqPerDayMap);
+		return new FeatureTemporalProfile(cutOffNorm, movingAvgNormMap, featureDocFreqPerDayMap,null);
 	}
 
 	
-	private static double getCutOff(double sumUpMovingAng,int timeWindows,LinkedHashMap<String,Double> movingAvgOnlyMap,double x){
+	public static double getCutOff(double sumUpMovingAng,int timeWindows,LinkedHashMap<String,Double> movingAvgOnlyMap,double x){
 		double mean = (double)sumUpMovingAng / timeWindows;
 		double stand = getStandardDeviation(movingAvgOnlyMap, mean,timeWindows);
 		double cutOff = mean + (x * stand);

@@ -14,6 +14,7 @@ public class FeatureTemporalProfile {
 	private double cutOffNorm;
 	private LinkedHashMap<String,Double> movingAvgNormMap; //date to mov avg score
 	private Map<String,Integer> featureDocFreqPerDayMap; //date to df
+	private Map<String,Float> featureDocScorePerDayMap;
 	private List<Burst> burstList; //contains the burst intervals of this feature
 	/**
 	 * @param cutOffNorm
@@ -22,11 +23,12 @@ public class FeatureTemporalProfile {
 	 */
 	public FeatureTemporalProfile(double cutOffNorm,
 			LinkedHashMap<String, Double> movingAvgNormMap,
-			Map<String, Integer> featureDocFreqPerDayMap) {
+			Map<String, Integer> featureDocFreqPerDayMap,Map<String,Float> featureDocScorePerDayMap) {
 		super();
 		this.cutOffNorm = cutOffNorm;
 		this.movingAvgNormMap = movingAvgNormMap;
 		this.featureDocFreqPerDayMap = featureDocFreqPerDayMap;
+		this.featureDocScorePerDayMap = featureDocScorePerDayMap;
 		this.burstList = new ArrayList<Burst>();
 		detectBurstPeriods();
 	}
@@ -76,6 +78,25 @@ public class FeatureTemporalProfile {
 		calculateTotalNrOfDocsInEachBurst();
 	}
 	
+	
+	
+	/**
+	 * @return the featureDocScorePerDayMap
+	 */
+	public Map<String, Float> getFeatureDocScorePerDayMap() {
+		return featureDocScorePerDayMap;
+	}
+
+
+	/**
+	 * @param featureDocScorePerDayMap the featureDocScorePerDayMap to set
+	 */
+	public void setFeatureDocScorePerDayMap(
+			Map<String, Float> featureDocScorePerDayMap) {
+		this.featureDocScorePerDayMap = featureDocScorePerDayMap;
+	}
+
+
 	/**
 	 * @return the burstList
 	 */

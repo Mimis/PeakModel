@@ -8,6 +8,7 @@ import java.util.List;
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.util.CharArraySet;
 import org.apache.lucene.index.DirectoryReader;
@@ -18,11 +19,18 @@ import org.apache.lucene.index.IndexWriterConfig.OpenMode;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
+import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
+import org.apache.lucene.search.BooleanClause;
+import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.Collector;
+import org.apache.lucene.search.ConstantScoreQuery;
+import org.apache.lucene.search.FieldCacheRangeFilter;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.Query;
+import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.search.TotalHitCountCollector;
 import org.apache.lucene.store.Directory;
@@ -80,6 +88,34 @@ public class HelperLucene {
 		TopDocs topDocs = searcher.search(query, nrOfDocsToReturn);
 		return topDocs;
 	}
+
+	public static TopDocs queryIndexGetTopDocsBoolean(QueryParser queryParser,IndexSearcher searcher, String queryText,String year,String startD,String endD, int nrOfDocsToReturn) throws  ParseException, IOException{
+		FieldCacheRangeFilter<String> filter = null;
+		if(startD !=null)
+			filter = FieldCacheRangeFilter.newStringRange("date",year+""+startD, year+""+endD, true, true);
+		else
+			filter = FieldCacheRangeFilter.newStringRange("date",year+"-01-01", year+"-12-31", true, true);
+		
+		BooleanQuery b = new BooleanQuery();
+		b.add(new BooleanClause(new MatchAllDocsQuery(), BooleanClause.Occur.SHOULD));
+		b.add(new TermQuery(new Term("content", queryText)), BooleanClause.Occur.MUST);
+		b.add(new TermQuery(new Term("title", queryText)), BooleanClause.Occur.MUST_NOT);
+
+		StandardAnalyzer analyzer = new StandardAnalyzer(Version.LUCENE_43);
+
+		Query query = new MultiFieldQueryParser(Version.LUCENE_43, new String[] {"content", "title"},analyzer).parse(b.toString());
+		//System.out.println(query.toString()+"\t"+filter.toString());
+		TopDocs topDocs = searcher.search(query,filter, nrOfDocsToReturn);
+		return topDocs;
+	}
+
+	public static TopDocs queryIndexGetDocsWithoutScoring(QueryParser queryParser,IndexSearcher searcher, String queryText, int nrOfDocsToReturn) throws  ParseException, IOException{
+		Query query = queryParser.parse(queryText);
+		TopDocs topDocs = searcher.search(new ConstantScoreQuery(query), nrOfDocsToReturn);
+		return topDocs;
+	}
+
+	
 	
 	public static void closeIndexWriter(IndexWriter indexWriter,boolean executeIndexMerge) throws IOException{
 		indexWriter.close(executeIndexMerge);

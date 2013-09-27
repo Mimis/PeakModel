@@ -114,7 +114,7 @@ public class Helper {
 	public static void displayBurstsPeriods(FeatureTemporalProfile featureTemporalProfile){
 		Collections.sort(featureTemporalProfile.getBurstList(), Burst.COMPARATOR_BURSTINESS);
         for(Burst burst:featureTemporalProfile.getBurstList()){
-        	System.out.println("\n#"+burst.toString());
+        	System.out.println("#"+burst.toString());
         }
 	}
 
@@ -174,6 +174,12 @@ public class Helper {
 			return 0;
 	}
 	
+	public static float getScoreFromYearToTfMap(String year,Map<String,Float> scorePerYearMap){
+		if(scorePerYearMap.containsKey(year))
+			return scorePerYearMap.get(year);
+		else
+			return 0;
+	}
 	
 	/**
 	 * Group NGrams with a stop word by sum up their frequencies

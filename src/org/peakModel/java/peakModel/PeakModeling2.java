@@ -8,11 +8,10 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import javax.swing.JButton;
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.document.Document;
@@ -33,17 +32,12 @@ import org.peakModel.java.peakModel.document_process.KbDocument;
 import org.peakModel.java.utils.Helper;
 import org.peakModel.java.utils.HelperLucene;
 
-import com.apporiented.algorithm.clustering.AverageLinkageStrategy;
-import com.apporiented.algorithm.clustering.Cluster;
-import com.apporiented.algorithm.clustering.ClusteringAlgorithm;
-import com.apporiented.algorithm.clustering.DefaultClusteringAlgorithm;
-
 public class PeakModeling2 {
 	
 	public static void main(String args[]) throws IOException, ParseException, java.text.ParseException{
 		
 		//========================================================== Input Parameters ==========================================================//
-		final String initialQuery = args[0];
+		final String query = args[0];
 		final String date = args[1].equals("null") ? null : args[1] ;//year
 		final boolean useForSearchOnlyTitle = Boolean.parseBoolean(args[2]);
 		final boolean useStopWords = Boolean.parseBoolean(args[3]);
@@ -53,21 +47,9 @@ public class PeakModeling2 {
 		final int MAX_DOCS = 300000;
 		final int MAX_TITLE_LENGTH = 100;
 		final int MIN_TITLE_LENGTH = 1;
+		//burst detection...
 		final int burstTimeSpan = 7;
 	    final double x = 2.0;
-
-		//FILES
-		String dutchStopWordsFile =  "/Users/mimis/Development/EclipseProject/PeakModel/data/stopWords/dutch.txt";
-		String stopWordFile = null;
-		if(useStopWords)
-			stopWordFile = dutchStopWordsFile;
-		else
-			stopWordFile = "/Users/mimis/Development/EclipseProject/PeakModel/data/stopWords/empty.txt";
-		String indexKbCorpusFileName = "/Users/mimis/Development/EclipseProject/PeakModel/index/KB_1950_1995";
-		String indexKbUnigramFileName = "/Users/mimis/Development/EclipseProject/PeakModel/index/IndexKB1gram16-17-18-19Min10TimesSorted";
-		String indexKbBigramFileName = "/Users/mimis/Development/EclipseProject/PeakModel/index/IndexKB2gramMin10PerYear1840-1995";
-		String fileWithTotalTFperYearUnigram = "/Users/mimis/Development/EclipseProject/PeakModel/index/PeakPeriodTFIndex/peakPeriodTFunigrams.tsv";
-		String fileWithTotalTFperYearBigram = "/Users/mimis/Development/EclipseProject/PeakModel/index/PeakPeriodTFIndex/peakPeriodTFbigrams.tsv";
 		//==========================================================End Parameters==========================================================//
 
 		
@@ -91,14 +73,17 @@ public class PeakModeling2 {
 		
 		
 		//========================================================== Main ==========================================================//
-		PeakModeling2 peakModel = new PeakModeling2(initialQuery, date, useForSearchOnlyTitle, useStopWords, minN, maxN, NUMBER_THREADS, MAX_DOCS, MAX_TITLE_LENGTH, MIN_TITLE_LENGTH, burstTimeSpan, dutchStopWordsFile, stopWordFile, indexKbCorpusFileName, indexKbUnigramFileName, indexKbBigramFileName, fileWithTotalTFperYearUnigram, fileWithTotalTFperYearBigram);
+		PeakModeling2 peakModel = new PeakModeling2(useForSearchOnlyTitle, useStopWords, minN, maxN, NUMBER_THREADS, MAX_DOCS, MAX_TITLE_LENGTH, MIN_TITLE_LENGTH, burstTimeSpan);
+		peakModel.getPerYearStats(date);
+
 		//System.out.println("Nr of docs:"+peakModel.getNrOfDocs());
 		long startTime = System.currentTimeMillis();
 
 		/**
 		 * Get documents based on given query
 		 */
-		peakModel.getKbDocs();
+		int max_number_of_documents = -1;//-1 for using the default value
+		peakModel.getKbDocs(query,date,true,max_number_of_documents);
 	    System.out.println("#Total Retrieve Documents run time:"+ (System.currentTimeMillis()-startTime)/1000);
 
 	    
@@ -106,7 +91,7 @@ public class PeakModeling2 {
 		 * Construct Query Temporal Profile
 		 * 	1) detect burst periods based on querys temporal distribution
 		 */
-        FeatureTemporalProfile queryTemporalProfile = Burstiness.measureBurstinessForPeakYearMovingAverage(peakModel.date, peakModel.queryDocFreqPerDayMap, peakModel.burstTimeSpan,x);
+        FeatureTemporalProfile queryTemporalProfile = Burstiness.measureBurstinessForPeakYearMovingAverage(date, peakModel.queryDocFreqPerDayMap, peakModel.burstTimeSpan,x);
         System.out.println("#Total queryTemporalProfile run time:"+ (System.currentTimeMillis()-startTime)/1000);
 
         
@@ -118,11 +103,11 @@ public class PeakModeling2 {
         int minNGramLengthLM = 1;
         int maxNGramLengthLM = 4;
         //BURSTs DOCS:get all documents that are published on the burst period and extract Ngram Models
-		List<KbDocument> burstDocList = peakModel.getBurstsDocumentsList(queryTemporalProfile);
+		Set<KbDocument> burstDocList = peakModel.getBurstsDocumentsList(queryTemporalProfile);
 		List<LanguageModel> burstLanguageModelList = createLanguageModels(burstDocList, minNGramLengthLM, maxNGramLengthLM);
 		
 		//NON BURSTS DOCS:get all documents that are NOT published on the burst period and extract Ngram Models
-		List<KbDocument> nonBurstDocList = peakModel.getNonBurstsDocumentsList(queryTemporalProfile);
+		Set<KbDocument> nonBurstDocList = peakModel.getNonBurstsDocumentsList(queryTemporalProfile);
 		List<LanguageModel> noBurstLanguageModelList = createLanguageModels(nonBurstDocList, minNGramLengthLM, maxNGramLengthLM);
 				
 		//ALL DOCUMENTS
@@ -152,10 +137,10 @@ public class PeakModeling2 {
 		 * Statistical Measures against the whole corpus
 		 * Get best ngrams based on Log_corpus measure
 		 */
-//		LanguageModel lang = allDocsLanguageModelList.get(burstLanguageModelList.indexOf(new LanguageModel(minN)));
+		LanguageModel lang = allDocsLanguageModelList.get(burstLanguageModelList.indexOf(new LanguageModel(minN)));
 //		LanguageModel lang = burstLanguageModelList.get(burstLanguageModelList.indexOf(new LanguageModel(minN)));
 //		LanguageModel lang = noBurstLanguageModelList.get(noBurstLanguageModelList.indexOf(new LanguageModel(minN)));
-//		peakModel.getNgramPerYearSTats(lang.getNgramList(),25);
+		peakModel.getNgramPerYearSTats(lang.getNgramList(),25,date);
 		
 		
 
@@ -173,15 +158,11 @@ public class PeakModeling2 {
 		 * for a fourgram we take in account the trigrams and bigrams weights that include in if minNgramLevelForScoreConsideration==2
 		 * for a bigram we cant use any unigram if minNgramLevelForScoreConsideration==2
 		 */
-//		int minNgramLevelForScoreConsideration =1; //use till bigrams for back off model;that means we recalculate weights only for greater than bigrams models!
+//		int minNgramLevelForScoreConsideration = 1; //use till bigrams for back off model;that means we recalculate weights only for greater than bigrams models!
 //		peakModel.measureSignificanceBasedOnBackOffModel(burstLanguageModelList, maxNGramLengthLM, 2,minNgramLevelForScoreConsideration);
-//		Helper.displayLanguageModelsByLogLikelihoodBurst(burstLanguageModelList,noBurstLanguageModelList, "Burst",minNGramLengthLM,maxNGramLengthLM,10);
+//		Helper.displayLanguageModelsByLogLikelihoodBurst(burstLanguageModelList,noBurstLanguageModelList, "BackOffBurst",minNGramLengthLM,maxNGramLengthLM,10);
 
 
-		/**
-		 * Cluster Documents: UNIGRAMS, Cosine, TFxIDF_peak_year, Hierachical Aglomerative clustering
-		 */
-//        double[][] docSimMatrix = PeakModelWithDocumentSimilarity.computeDocumentsSimMatrix(peakModel.documentList, allDocsLanguageModelList.get(allDocsLanguageModelList.indexOf(new LanguageModel(1))), peakModel.stopWords);
 
 		
 		
@@ -201,7 +182,7 @@ public class PeakModeling2 {
 //		List<String> topFeatureList = peakModel.getTopFeatures(LM, 25,NGram.COMPARATOR_LOG_CORPUS);
 
 		//generate explanations...
-//		peakModel.explanationGenerationHITS(topFeatureList);
+//		peakModel.explanationGenerationHITS(topFeatureList,queryTemporalProfile);
 		
 		//display
 //		Collections.sort(peakModel.documentList,KbDocument.COMPARATOR_HITS);
@@ -213,7 +194,11 @@ public class PeakModeling2 {
 		
 		
 		
-		
+		/**
+		 * Cluster Documents: UNIGRAMS, Cosine, TFxIDF_peak_year, Hierachical Aglomerative clustering
+		 */
+//        double[][] docSimMatrix = PeakModelWithDocumentSimilarity.computeDocumentsSimMatrix(peakModel.documentList, allDocsLanguageModelList.get(allDocsLanguageModelList.indexOf(new LanguageModel(1))), peakModel.stopWords);
+
         //Close Indexes
         peakModel.closeIndexes();
         
@@ -232,15 +217,16 @@ public class PeakModeling2 {
 	 * @param comparator
 	 * @return
 	 */
-	public List<String> getTopFeatures(LanguageModel LM,int topNFeatures,Comparator<NGram> comparator){
+	public List<String> getTopFeatures(String query,LanguageModel LM,int topNFeatures,Comparator<NGram> comparator){
 		//Get the top N features without stopWords and query tokens
         List<String> topFeatureList = new ArrayList<String>();
-        List<String> queryTokens = new ArrayList<String>(Arrays.asList(this.query.split(" ")));
-        queryTokens.add(this.query);
+        List<String> queryTokens = new ArrayList<String>(Arrays.asList(query.split(" ")));
+        queryTokens.add(query);
 		Collections.sort(LM.getNgramList(),comparator);
 		for(NGram ng:LM.getNgramList()){
 			String currentNgram = ng.getNgram();
 			if(!this.stopWords.contains(currentNgram) && !queryTokens.contains(currentNgram)){
+				System.out.println("top::"+currentNgram);
 				topFeatureList.add(currentNgram);
 				if(topFeatureList.size()==topNFeatures)
 					break;
@@ -248,14 +234,18 @@ public class PeakModeling2 {
 		}
 		return topFeatureList;
 	}
-	public void explanationGenerationHITS(List<String> topFeatureList){		
+	public void explanationGenerationHITS(List<String> topFeatureList,FeatureTemporalProfile queryTemporalProfile){		
 		//count hits
+		Set<String> burstDates = queryTemporalProfile.getAllBurstDatesSet();
 		for(KbDocument doc : documentList){
 			int countHits = 0;
-			for(String docToken : doc.getTokenSet()){
-				if(topFeatureList.contains(docToken))
-					countHits++;
-			}
+			String docDate = doc.getDate();
+//			if(burstDates.contains(docDate)){
+				for(String docToken : doc.getTokenSet()){
+					if(topFeatureList.contains(docToken))
+						countHits++;
+				}
+//			}
 			doc.setHitCounts(countHits);
 		}
 	}
@@ -301,17 +291,17 @@ public class PeakModeling2 {
 	 * @param burstDocList
 	 * @param nonBurstDocList
 	 */
-	public static void visualization(PeakModeling2 peakModel,FeatureTemporalProfile queryTemporalProfile,List<KbDocument> burstDocList,List<KbDocument> nonBurstDocList,List<LanguageModel> burstLanguageModelList,List<LanguageModel> noBurstLanguageModelList,List<LanguageModel> allDocsLanguageModelList,int minNGramLengthLM,int maxNGramLengthLM){
-//		Helper.displayBurstsPeriods(queryTemporalProfile);
+	public static void visualization(PeakModeling2 peakModel,FeatureTemporalProfile queryTemporalProfile,Set<KbDocument> burstDocList,Set<KbDocument> nonBurstDocList,List<LanguageModel> burstLanguageModelList,List<LanguageModel> noBurstLanguageModelList,List<LanguageModel> allDocsLanguageModelList,int minNGramLengthLM,int maxNGramLengthLM){
+		Helper.displayBurstsPeriods(queryTemporalProfile);
 		System.out.println("total Docs:"+peakModel.totalNumberOfRelevantDocuments+"\tBurstsDocs:"+burstDocList.size()+"\tNonBurstsDocs:"+nonBurstDocList.size()+"\tCuttoff:"+queryTemporalProfile.getCutOffNorm());
 //		Helper.displayLanguageModelsByEntropy(burstLanguageModelList,noBurstLanguageModelList, "BurstEntropy",minNGramLengthLM,maxNGramLengthLM,20);
 //		Helper.displayLanguageModelsByLogLikelihoodBurst(burstLanguageModelList,noBurstLanguageModelList, "BurstLogLikelihood",minNGramLengthLM,maxNGramLengthLM,25);
-//		Helper.displayLanguageModelsByLogLikelihoodCorpus(allDocsLanguageModelList,noBurstLanguageModelList, "ALL",minNGramLengthLM,maxNGramLengthLM,100);
+		Helper.displayLanguageModelsByLogLikelihoodCorpus(allDocsLanguageModelList,noBurstLanguageModelList, "ALL",minNGramLengthLM,maxNGramLengthLM,100);
 		
 //		Helper.displayLanguageModelsByFrequency(burstLanguageModelList, noBurstLanguageModelList,"BurstFrequency",peakModel.stopWords, minNGramLengthLM,maxNGramLengthLM,40);
 //		Helper.displayLanguageModelsByFrequency(noBurstLanguageModelList, burstLanguageModelList,"Non Burst",peakModel.stopWords,minNGramLengthLM,maxNGramLengthLM,40);
 //		Helper.displayLanguageModelsByFrequency(allDocsLanguageModelList, noBurstLanguageModelList,"ALL",peakModel.stopWords, minNGramLengthLM,maxNGramLengthLM,40);
-		Helper.displayLanguageModelsByTFIDFpeak_year(allDocsLanguageModelList, noBurstLanguageModelList,"ALL",peakModel.stopWords, minNGramLengthLM,maxNGramLengthLM,250);
+//		Helper.displayLanguageModelsByTFIDFpeak_year(allDocsLanguageModelList, noBurstLanguageModelList,"ALL",peakModel.stopWords, minNGramLengthLM,maxNGramLengthLM,250);
 		
 //        Helper.displayBurstsDocuments(queryTemporalProfile, peakModel.documentList);
 //        Helper.displayNoBurstsDocuments(queryTemporalProfile, peakModel.documentList);
@@ -399,7 +389,7 @@ public class PeakModeling2 {
 	 * 
 	 * @param ngramList
 	 */
-	public void getNgramPerYearSTats(List<NGram> ngramList,int  topN){
+	public void getNgramPerYearSTats(List<NGram> ngramList,int  topN,String date){
 //        ngramList = Helper.keepNoStopWordsFromList(ngramList, stopWords);
 //        ngramList = Helper.skipNgramWithQueryAndStopWord(ngramList, stopWords, query);
 //        ngramList = Helper.keepNoNgramNumbersFromList(ngramList);
@@ -438,8 +428,6 @@ public class PeakModeling2 {
 	/*
 	 * Input Paramaters
 	 */
-	private final String query;
-	private final String date;//year
 	private final boolean useForSearchOnlyTitle;
 	private final boolean useStopWords;
 	private final int minN;
@@ -453,12 +441,12 @@ public class PeakModeling2 {
 	/*
 	 * Variables
 	 */
-	private List<KbDocument> documentList = new ArrayList<KbDocument>();
+	private Set<KbDocument> documentList = new LinkedHashSet<KbDocument>();
 	private HashMap<String,Long> peakPeriodMap = new HashMap<String,Long>();
 	private List<String> stopWords = new ArrayList<String>();
     //keep the doc frew that query got durring the peak year
 	private HashMap<String,Integer> queryDocFreqPerDayMap = new HashMap<String,Integer>();
-
+	private HashMap<String,Float> queryTotalDocScorePerDayMap = new HashMap<String,Float>();
 	
 	private int totalNumberOfRelevantDocuments = 0;
 	private long maxTF_query_peak = 0;
@@ -468,14 +456,14 @@ public class PeakModeling2 {
 	private long N_years = 0;//total number of years
 
 	//FILES
+	String dutchStopWordsFile =  "/Users/mimis/Development/EclipseProject/PeakModel/data/stopWords/dutch.txt";
 	private final String stopWordFile;
-    private final String  indexKbCorpusFileName;
-    private final String  indexKbUnigramFileName;
-    private final String  indexKbBigramFileName;
-    private final String  fileWithTotalTFperYearUnigram;
-    private final String  fileWithTotalTFperYearBigram;
-    
-    
+    private final String indexKbCorpusFileName = "/Users/mimis/Development/EclipseProject/PeakModel/index/KB_1950_1995";
+    private final String indexKbUnigramFileName = "/Users/mimis/Development/EclipseProject/PeakModel/index/IndexKB1gram16-17-18-19Min10TimesSorted";
+    private final String indexKbBigramFileName = "/Users/mimis/Development/EclipseProject/PeakModel/index/IndexKB2gramMin10PerYear1840-1995";
+    private final String fileWithTotalTFperYearUnigram = "/Users/mimis/Development/EclipseProject/PeakModel/index/PeakPeriodTFIndex/peakPeriodTFunigrams.tsv";
+    private final String fileWithTotalTFperYearBigram = "/Users/mimis/Development/EclipseProject/PeakModel/index/PeakPeriodTFIndex/peakPeriodTFbigrams.tsv";
+
     /*
      * Lucene
      */
@@ -519,15 +507,8 @@ public class PeakModeling2 {
 	 * @param fileWithTotalTFperYearBigram
 	 * @throws IOException 
 	 */
-	public PeakModeling2(String query, String date,	boolean useForSearchOnlyTitle, boolean useStopWords, int minN,	int maxN, int nUMBER_THREADS, int mAX_DOCS,int mAX_TITLE_LENGTH,int mIN_TITLE_LENGTH, int burstTimeSpan,
-			 String dutchStopWordsFile,
-			String stopWordFile, String indexKbCorpusFileName,
-			String indexKbUnigramFileName, String indexKbBigramFileName,
-			String fileWithTotalTFperYearUnigram,
-			String fileWithTotalTFperYearBigram) throws IOException {
+	public PeakModeling2(boolean useForSearchOnlyTitle, boolean useStopWords, int minN,	int maxN, int nUMBER_THREADS, int mAX_DOCS,int mAX_TITLE_LENGTH,int mIN_TITLE_LENGTH, int burstTimeSpan) throws IOException {
 		super();
-		this.query = query;
-		this.date = date;
 		this.useForSearchOnlyTitle = useForSearchOnlyTitle;
 		this.useStopWords = useStopWords;
 		this.minN = minN;
@@ -538,32 +519,21 @@ public class PeakModeling2 {
 		this.MIN_TITLE_LENGTH = mIN_TITLE_LENGTH;
 		this.burstTimeSpan = burstTimeSpan;
 		
-		
-		this.stopWordFile = stopWordFile;
-		this.indexKbCorpusFileName = indexKbCorpusFileName;
-		this.indexKbUnigramFileName = indexKbUnigramFileName;
-		this.indexKbBigramFileName = indexKbBigramFileName;
-		this.fileWithTotalTFperYearUnigram = fileWithTotalTFperYearUnigram;
-		this.fileWithTotalTFperYearBigram = fileWithTotalTFperYearBigram;
+		if(useStopWords)
+			this.stopWordFile = this.dutchStopWordsFile;
+		else
+			this.stopWordFile = "/Users/mimis/Development/EclipseProject/PeakModel/data/stopWords/empty.txt";
+
 		
 		/*
 		 * initialize stop words
 		 */
 		this.stopWords = Helper.readFileLineByLineReturnListOfLineString(dutchStopWordsFile);
-		//this is for lucene;if we use stopwords use the dutch file, otherwise an empty one
-		if(this.useStopWords)
-			stopWordFile = dutchStopWordsFile;
-		else
-			stopWordFile = "/Users/mimis/Development/EclipseProject/PeakModel/data/stopWords/empty.txt";
 
 		/*
 		 * initialize lucene
 		 */
 		initializeLucene();
-		/*
-		 * Get Per Year Stats and Searcher
-		 */
-		getPerYearStats();
 	}
 	
 	/**
@@ -574,13 +544,13 @@ public class PeakModeling2 {
 	 * @return list of language model
 	 * @throws IOException
 	 */
-	public static List<LanguageModel> createLanguageModels(List<KbDocument> documentList,int minNGramLength,int maxNGramLength) throws IOException{
+	public static List<LanguageModel> createLanguageModels(Set<KbDocument> documentList,int minNGramLength,int maxNGramLength) throws IOException{
 		List<LanguageModel> languageModelList = new ArrayList<LanguageModel>();
 		for(int ngramLength=minNGramLength;ngramLength<=maxNGramLength;ngramLength++)
 			languageModelList.add(createLanguageModel(documentList, ngramLength));
 		return languageModelList;
 	}
-	public static LanguageModel createLanguageModel(List<KbDocument> documentList,int ngramLength) throws IOException{
+	public static LanguageModel createLanguageModel(Set<KbDocument> documentList,int ngramLength) throws IOException{
 		List<NGram> ngramList = new ArrayList<NGram>();
 		for(KbDocument kb : documentList)
 			Helper.mapTokenListToNGramList(Helper.getGivenLengthNgramsFromList(kb.getTokenSet(),ngramLength), kb.getDate(), "title", ngramList);
@@ -595,8 +565,8 @@ public class PeakModeling2 {
 	 * @param documentList
 	 * @return list of documents that are published durring query;s burst periods
 	 */
-	public  List<KbDocument> getBurstsDocumentsList(FeatureTemporalProfile featureTemporalProfile){
-		List<KbDocument> documentBurstList = new ArrayList<KbDocument>();
+	public  Set<KbDocument> getBurstsDocumentsList(FeatureTemporalProfile featureTemporalProfile){
+		Set<KbDocument> documentBurstList = new HashSet<KbDocument>();
 		Set<String> allBurstYearSet = new HashSet<String>();
         for(Burst burst:featureTemporalProfile.getBurstList())
         	allBurstYearSet.addAll(burst.getDateSet());
@@ -613,8 +583,8 @@ public class PeakModeling2 {
 	 * @param documentList
 	 * @return list of documents that are NOT published durring query;s burst periods
 	 */
-	public  List<KbDocument> getNonBurstsDocumentsList(FeatureTemporalProfile featureTemporalProfile){
-		List<KbDocument> documentBurstList = new ArrayList<KbDocument>();
+	public  Set<KbDocument> getNonBurstsDocumentsList(FeatureTemporalProfile featureTemporalProfile){
+		Set<KbDocument> documentBurstList = new HashSet<KbDocument>();
 		Set<String> allBurstYearSet = new HashSet<String>();
         for(Burst burst:featureTemporalProfile.getBurstList())
         	allBurstYearSet.addAll(burst.getDateSet());
@@ -631,25 +601,135 @@ public class PeakModeling2 {
 	 * @throws IOException
 	 */
 	public void closeIndexes() throws IOException{
-        this.ngramIndexReader.close();
         this.kbIndexReader.close();
-        this.indexNgramDir.close();
         this.indexKbDir.close();
+
+        if(this.ngramIndexReader != null){
+	        this.ngramIndexReader.close();
+	        this.indexNgramDir.close();
+        }
 	}
 	
 	
+	/**
+	 * @return the queryTotalDocScorePerDayMap
+	 */
+	public HashMap<String, Float> getQueryTotalDocScorePerDayMap() {
+		return queryTotalDocScorePerDayMap;
+	}
+
+
+
+	/**
+	 * @param queryTotalDocScorePerDayMap the queryTotalDocScorePerDayMap to set
+	 */
+	public void setQueryTotalDocScorePerDayMap(
+			HashMap<String, Float> queryTotalDocScorePerDayMap) {
+		this.queryTotalDocScorePerDayMap = queryTotalDocScorePerDayMap;
+	}
+
+
+
+	/**
+	 * @return the totalNumberOfRelevantDocuments
+	 */
+	public int getTotalNumberOfRelevantDocuments() {
+		return totalNumberOfRelevantDocuments;
+	}
+
+	/**
+	 * @param totalNumberOfRelevantDocuments the totalNumberOfRelevantDocuments to set
+	 */
+	public void setTotalNumberOfRelevantDocuments(int totalNumberOfRelevantDocuments) {
+		this.totalNumberOfRelevantDocuments = totalNumberOfRelevantDocuments;
+	}
+
+	public void GetDocsPer15daysDistribution(String query,String date) throws ParseException, IOException{
+		Map<String,Integer> dateToDf = new LinkedHashMap<String,Integer>();
+		String[] daysArr = new String[2];
+		daysArr[0] = "01-15";
+		daysArr[1] = "16-31";
+		int totalHits=0;
+		for(int i=1;i<=12;i++){
+			
+			String month = null;
+			if(i<10) month = "0" +i;
+			else month = Integer.toString(i);
+
+			
+			for(String days:daysArr){
+				String[] startEndDays = days.split("-");
+//				TopDocs topDocs = HelperLucene.queryIndexGetTopDocsBoolean(queryParser, kbSearcher, "\""+query+"\"", date, "-"+month+"-"+startEndDays[0],"-"+month+"-"+startEndDays[1], this.MAX_DOCS);
+				TopDocs topDocs = HelperLucene.queryIndexGetDocsWithoutScoring(this.queryParser,this.kbSearcher, constructQuery15Days(query, date, i,startEndDays[0],startEndDays[1]),this.MAX_DOCS);
+				int hits = topDocs.totalHits;
+				//System.out.println(date+"-"+i+"-"+startEndDays[0]+","+hits);
+				totalHits+=hits;
+				dateToDf.put(date+"-"+i+"-"+startEndDays[0], hits);
+			}
+		}
+		
+//		for(Map.Entry<String, Integer> entry:dateToDf.entrySet())
+//			System.out.println(entry.getKey()+"\t"+(double)entry.getValue()/totalHits);
+		
+		calculateMA(dateToDf, 2,2);
+	}
+	
+	public void calculateMA(Map<String,Integer> dateToDf,int timeSpan,double standardDeviationCutOff){
+		LinkedHashMap<String,Double> movingAvgNormMap = new LinkedHashMap<String,Double>();
+		double sumUpMovingAngNorm = 0.0;
+
+		double totalFeatureFreq = Burstiness.totalFeatureFrequencies(dateToDf);
+
+		String[] datesArr = dateToDf.keySet().toArray(new String[dateToDf.size()]);
+		for(int i=0;i<datesArr.length;i++){
+//			if(i+timeSpan > datesArr.length)
+//				break;
+
+			double currentMA = (double)dateToDf.get(datesArr[i]) / totalFeatureFreq;
+//			for(int y=i+1;y<i+timeSpan;y++){
+//				currentMA += (double)dateToDf.get(datesArr[y])/totalFeatureFreq;
+//			}
+			movingAvgNormMap.put(datesArr[i], currentMA);
+			sumUpMovingAngNorm +=currentMA;
+		}
+		
+		int timeWindows = movingAvgNormMap.size();
+		double cutOffNorm = Burstiness.getCutOff(sumUpMovingAngNorm, timeWindows, movingAvgNormMap,standardDeviationCutOff);
+		
+		System.out.println("cutOffNorm:"+cutOffNorm+"\tsumUpMovingAngNorm:"+sumUpMovingAngNorm);
+		for(Map.Entry<String, Double> entry:movingAvgNormMap.entrySet()){
+			if(entry.getValue() > cutOffNorm)
+				System.out.println("BURST\t"+entry.getKey()+"\t"+entry.getValue());
+			else
+				System.out.println(entry.getKey()+"\t"+entry.getValue());
+		}
+		
+	}
+
+
 	/**
 	 * Retrieve the docs that the query bring and save the query doc freq durring the peak year
 	 * @throws ParseException
 	 * @throws IOException
 	 */
-	public void getKbDocs() throws ParseException, IOException{
-        TopDocs topDocs = HelperLucene.queryIndexGetTopDocs(this.queryParser,this.kbSearcher, constructQuery(),this.MAX_DOCS);
+	public void getKbDocs(String query,String date,boolean scoreDocs,int max_documents) throws ParseException, IOException{
+		TopDocs topDocs = null;
+		if(scoreDocs){
+			topDocs = HelperLucene.queryIndexGetTopDocs(this.queryParser,this.kbSearcher, constructQuery(query,date),max_documents!=-1?max_documents:this.MAX_DOCS);
+//			topDocs = HelperLucene.queryIndexGetTopDocsBoolean(queryParser, kbSearcher, "\""+query+"\"", date,null,null, this.MAX_DOCS);
+		}
+		else
+			topDocs = HelperLucene.queryIndexGetDocsWithoutScoring(this.queryParser,this.kbSearcher, constructQuery(query,date),max_documents!=-1?max_documents:this.MAX_DOCS);
+
 		ScoreDoc[] hits = topDocs.scoreDocs;
+		queryDocFreqPerDayMap = new HashMap<String,Integer>();
+		documentList = new LinkedHashSet<KbDocument>();
 		
+
         if(hits.length==0){
         	System.out.println("Zero Results :/");
         }else{
+        	int rank=1;
 			for (int i = 0; i < hits.length; ++i) {
 				int docId = hits[i].doc;
 				final Document doc = this.kbSearcher.doc(docId);
@@ -663,21 +743,33 @@ public class PeakModeling2 {
 				
 				//Skip larger than N titles
 				List<String> tokenList = HelperLucene.tokenizeString(this.NgramAnalyzerForTokenization, title);
-				int titleTokenSize = title.split("\\s+").length;
-				if(titleTokenSize > this.MAX_TITLE_LENGTH || titleTokenSize <= this.MIN_TITLE_LENGTH)
-					continue;
+//				int titleTokenSize = title.split("\\s+").length;
+//				if(titleTokenSize > this.MAX_TITLE_LENGTH || titleTokenSize <= this.MIN_TITLE_LENGTH)
+//					continue;
 
-//				System.out.println(docId+"\t"+docDate+"\t"+title+"\tScore:"+hits[i].score+"\t"+tokenList.toString());
+
 				
 				//save current doc
-				this.documentList.add(new KbDocument(docId, title, tokenList, docDate, url, hits[i].score,i+1));
-				this.totalNumberOfRelevantDocuments++;
+				boolean isNewDoc = this.documentList.add(new KbDocument(docId, title, tokenList, docDate, url, hits[i].score,rank));
+				if(isNewDoc){
+					//Save query doc frequencies
+					if(this.queryDocFreqPerDayMap.containsKey(docDate))
+						this.queryDocFreqPerDayMap.put(docDate, this.queryDocFreqPerDayMap.get(docDate)+1);
+					else
+						this.queryDocFreqPerDayMap.put(docDate, 1);
+					
+					//save doc scores
+					if(this.queryTotalDocScorePerDayMap.containsKey(docDate)){
+						this.queryTotalDocScorePerDayMap.put(docDate, this.queryTotalDocScorePerDayMap.get(docDate)+hits[i].score);
+					}
+					else
+						this.queryTotalDocScorePerDayMap.put(docDate, hits[i].score);
+					
+					
+					rank++;
+				}		
 				
-				//Save query doc frequencies
-				if(this.queryDocFreqPerDayMap.containsKey(docDate))
-					this.queryDocFreqPerDayMap.put(docDate, this.queryDocFreqPerDayMap.get(docDate)+1);
-				else
-					this.queryDocFreqPerDayMap.put(docDate, 1);
+				
 				
 				//Save document rank per day
 //				int TopK = 5;
@@ -691,10 +783,12 @@ public class PeakModeling2 {
 //				}
 				
 			}
+			this.totalNumberOfRelevantDocuments = this.documentList.size();
+
         }
 
 	}
-	
+
 	private void initializeLucene() throws IOException{
 	    /*
          * KB index
@@ -714,21 +808,41 @@ public class PeakModeling2 {
         	this.queryParser = new MultiFieldQueryParser(Version.LUCENE_43, new String[] {"content", "title"},this.queryAnalyzer);
 	}
 	
+	
+	/**
+	 * @return the documentList
+	 */
+	public Set<KbDocument> getDocumentList() {
+		return documentList;
+	}
+
+
+
+	/**
+	 * @param documentList the documentList to set
+	 */
+	public void setDocumentList(Set<KbDocument> documentList) {
+		this.documentList = documentList;
+	}
+
+
+
 	public int getNrOfDocs(){
 		return this.kbIndexReader.numDocs();
 	}
 
+	
 	/**
 	 * Get per Year Stats(N_peak,N_corpus,N_years) and NGram Index/Searcher
 	 * @throws IOException
 	 */
-	private void getPerYearStats() throws IOException{
+	private void getPerYearStats(String date) throws IOException{
         /**
 		 * Get peak period Maps:  
 		 * 		N_peak_period
 		 * 		N_corpus(Year:TotalWords)
 		 */
-        if(this.date != null){
+        if(date != null && !date.equals("null")){
 	        if(this.minN==1){
 				Helper.getPeakPeriodIndex(this.fileWithTotalTFperYearUnigram, this.peakPeriodMap);
 				this.N_peak = peakPeriodMap.get(date);//TODO this may return null pointer exception
@@ -754,14 +868,26 @@ public class PeakModeling2 {
 
 	}
 	
-	private String constructQuery(){
-		String queryFinal = "\""+ this.query + "\"";
-		String date = this.date.equals("null") ? null : this.date ;//year
+	private String constructQuery(String query,String dateGiven){
+		String queryFinal = "\""+ query + "\"";
+		String date = dateGiven.equals("null") ? null : dateGiven ;//year
 		if(date != null)
 			queryFinal = queryFinal + " AND date:["+date+"-01-01 TO "+date+"-12-31]";
 		return queryFinal;
 	}
-	
+
+	private String constructQuery15Days(String query,String dateGiven,int m,String startDay,String EndDay){		
+		String month = null;
+		if(m<10) month = "0" +m;
+		else month = Integer.toString(m);
+			
+		String queryFinal = "\""+ query + "\"";
+		String date = dateGiven.equals("null") ? null : dateGiven ;//year
+		if(date != null)
+			queryFinal = queryFinal + " AND date:["+date+"-"+month+"-"+startDay+" TO "+date+"-"+month+"-"+EndDay+"]";
+		return queryFinal;
+	}
+
 	public static void displayQueryNormFreqPerDayAndDetectedBurstPeriods(List<LanguageModel> allDocsLanguageModelList, FeatureTemporalProfile queryTemporalProfile){
 
 		Set<String> allBurstYearSet = queryTemporalProfile.getAllBurstDatesSet();
@@ -783,5 +909,35 @@ public class PeakModeling2 {
 		}
 
 	}
+
+
+
+	/**
+	 * @return the queryDocFreqPerDayMap
+	 */
+	public HashMap<String, Integer> getQueryDocFreqPerDayMap() {
+		return queryDocFreqPerDayMap;
+	}
+
+
+
+	/**
+	 * @param queryDocFreqPerDayMap the queryDocFreqPerDayMap to set
+	 */
+	public void setQueryDocFreqPerDayMap(
+			HashMap<String, Integer> queryDocFreqPerDayMap) {
+		this.queryDocFreqPerDayMap = queryDocFreqPerDayMap;
+	}
+
+
+
+	/**
+	 * @return the burstTimeSpan
+	 */
+	public int getBurstTimeSpan() {
+		return burstTimeSpan;
+	}
+	
+	
 
 }
