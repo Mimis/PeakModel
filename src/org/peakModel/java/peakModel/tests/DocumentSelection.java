@@ -25,6 +25,8 @@ public class DocumentSelection extends PeakModeling2{
 	double avgDocsInPeaksPercent = 0;
 	double avgTopDocsInPeaksPercent = 0;
 
+	double avgPeakDays = 0;
+
 	public DocumentSelection(
 			boolean useForSearchOnlyTitle, boolean useStopWords, int minN,
 			int maxN, int nUMBER_THREADS, int mAX_DOCS, int mAX_TITLE_LENGTH,
@@ -43,7 +45,7 @@ public class DocumentSelection extends PeakModeling2{
 	 */
 	public static void main(String[] args)  throws IOException, ParseException, java.text.ParseException {
 		//========================================================== Input Parameters ==========================================================//
-		final boolean useStopWords = false;
+		final boolean useStopWords = true;
 		final int minN = 2;
 		final int maxN = 2;
 		final int NUMBER_THREADS = 2;
@@ -54,52 +56,49 @@ public class DocumentSelection extends PeakModeling2{
 		//==========================================================End Parameters==========================================================//
 
 		
-	    
-	    
-	    
 		
 		//========================================================== Main ==========================================================//
-		final boolean useForSearchOnlyTitle = false;
+		final boolean useForSearchOnlyTitle = true;
 		//burst detection...
-		final int burstTimeSpan = 2;
+		final int burstTimeSpan = 7;
 	    final double x = 2.0;
 	    //nr of docs to retrieve
-//		final int MAX_DOCS = 150;
+		final int MAX_DOCS = 15000;
 
 		boolean scoreDocs=true;
 		boolean useDocFreqForBurstDetection=true;
-	    int N = 30;//how many documents should we consider? TOTAL number of DOcs / N = number of docs to consider
+	    int N = 10;//how many documents should we consider? TOTAL number of DOcs / N = number of docs to consider
 	    
 	    
-	    for(int MAX_DOCS=100;MAX_DOCS<1400;MAX_DOCS+=50){
+//	    for(int MAX_DOCS=100;MAX_DOCS<1500;MAX_DOCS+=50){
 	    	
-	    DocumentSelection peakModel = new DocumentSelection(useForSearchOnlyTitle, useStopWords, minN, maxN, NUMBER_THREADS, MAX_DOCS, MAX_TITLE_LENGTH, MIN_TITLE_LENGTH, burstTimeSpan);
-		
-	    
-		for(Map.Entry<String, String> entry: getQueryList().entrySet()){
-			System.out.println("\n"+entry.getKey()+"\t"+entry.getValue());
-			FeatureTemporalProfile queryTemporalProfile = peakModel.runQuery(entry.getKey(),entry.getValue(),peakModel, x,scoreDocs,useDocFreqForBurstDetection);
-			peakModel.stats(queryTemporalProfile, peakModel,N,entry.getKey(),entry.getValue());
+		    DocumentSelection peakModel = new DocumentSelection(useForSearchOnlyTitle, useStopWords, minN, maxN, NUMBER_THREADS, MAX_DOCS, MAX_TITLE_LENGTH, MIN_TITLE_LENGTH, burstTimeSpan);
 			
-//			peakModel.calculateHeadlinesStatistics(peakModel);
-			
+		    
+			for(Map.Entry<String, String> entry: getQueryList().entrySet()){
+				System.out.println("\n"+entry.getKey()+"\t"+entry.getValue());
+				FeatureTemporalProfile queryTemporalProfile = peakModel.runQuery(entry.getKey(),entry.getValue(),peakModel, x,scoreDocs,useDocFreqForBurstDetection);
+				peakModel.stats(queryTemporalProfile, peakModel,N,entry.getKey(),entry.getValue());
+				
+	//			peakModel.calculateHeadlinesStatistics(peakModel);
+				
+	
+	//			Helper.displayBurstsPeriods(queryTemporalProfile);
+				//get number of docs per month
+	//			long startTime = System.currentTimeMillis();
+	//			peakModel.GetDocsPer15daysDistribution(entry.getKey(),entry.getValue());
+	//	        System.out.println("#Total run time:"+ (System.currentTimeMillis()-startTime));
+	
+	//			displayQueryMovingAvg(queryTemporalProfile);
+				//displayQueryDistribution(queryTemporalProfile,peakModel);
+				//displayTopBottomDocsDistribution(peakModel, 145);
+				//testParsimonious(queryTemporalProfile, peakModel,backgroundFile,foregroundFile);
+			}	
+			peakModel.displayAverageeStats(peakModel, getQueryList().size(),N);
+			//Close Indexes
+	        peakModel.closeIndexes();
 
-//			Helper.displayBurstsPeriods(queryTemporalProfile);
-			//get number of docs per month
-//			long startTime = System.currentTimeMillis();
-//			peakModel.GetDocsPer15daysDistribution(entry.getKey(),entry.getValue());
-//	        System.out.println("#Total run time:"+ (System.currentTimeMillis()-startTime));
-
-//			displayQueryMovingAvg(queryTemporalProfile);
-			//displayQueryDistribution(queryTemporalProfile,peakModel);
-			//displayTopBottomDocsDistribution(peakModel, 145);
-			//testParsimonious(queryTemporalProfile, peakModel,backgroundFile,foregroundFile);
-		}	
-		peakModel.displayAverageeStats(peakModel, getQueryList().size(),N);
-		//Close Indexes
-        peakModel.closeIndexes();
-
-	    }
+//	    }
 	}
 	
 	
@@ -225,15 +224,19 @@ public class DocumentSelection extends PeakModeling2{
 		System.out.println("Deafult Value:"+docs.length);
 		int topBest=N;
 		int count=1;
+		
+		//get top scored
 //		for(int i=0;i<docs.length;i++){
+			
+			
 		//get the last bottom from the whole document set
-		peakModel.getKbDocs(query, date, true,10000);
-		docs=peakModel.getDocumentList().toArray(new KbDocument[peakModel.getDocumentList().size()]);
-		System.out.println("All:"+docs.length);
+//		peakModel.getKbDocs(query, date, true,10000);
+//		docs=peakModel.getDocumentList().toArray(new KbDocument[peakModel.getDocumentList().size()]);
+//		System.out.println("All:"+docs.length);
 		for(int i=docs.length-1;i>=0;i--){
 
 			KbDocument doc=docs[i];
-			//System.out.println(count+" Score:"+doc.getScore()+"\t"+doc.getDate()+"\t"+doc.getTitle());
+			System.out.println(doc.getTitle());
 
 			if(queryTemporalProfile.getAllBurstDatesSet().contains(doc.getDate())){
 				if(count <=topBest)
@@ -244,6 +247,9 @@ public class DocumentSelection extends PeakModeling2{
 				countHitOnBurstDays++;
 			}
 			count++;
+			
+			if(count>N)
+				break;
 		}
 
 		double totalDocsPeaksPercent = (double)countHitOnBurstDays/peakModel.getTotalNumberOfRelevantDocuments()*100;
@@ -255,6 +261,9 @@ public class DocumentSelection extends PeakModeling2{
 		this.avgDocsInPeaksPercent += totalDocsPeaksPercent;
 		this.avgTopDocsInPeaksPercent += topDocsPeaksPercent;
 
+		
+		this.avgPeakDays += (double) queryTemporalProfile.getAllBurstDatesSet().size() / queryTemporalProfile.getFeatureDocFreqPerDayMap().size()*100;
+		
 		//Helper.displayBurstsPeriods(queryTemporalProfile);
 		System.out.println("#TotalDocs:"+peakModel.getTotalNumberOfRelevantDocuments());
 	    System.out.println("#countTitleHitDocumentInBurst:"+countTitleHitDocumentInBurst);
@@ -265,7 +274,7 @@ public class DocumentSelection extends PeakModeling2{
 		System.out.println(peakModel.getTotalNumberOfRelevantDocuments()+" & "+countHitOnBurstDays+"("+ totalDocsPeaksPercent +")  & "+ countTOPHitOnBurstDays+"("+topDocsPeaksPercent+")");
 	    System.out.println("##############################################################");
 
-	    
+	    //DISPLAY THE PERCENT OF TOP OR BOOTOM N DOCS APPEAR IN BURST PERIODS
 //	    try {
 //			Helper.writeLineToFile("nrOfDocsForPeakDetection.txt", topDocsPeaksPercent+"\t", true, false);
 //		} catch (IOException e) {
@@ -282,16 +291,20 @@ public class DocumentSelection extends PeakModeling2{
 		
 		double avgWordsLengthTitle = peakModel.avgNumberOfWordsLengthInTitle/numberofQueries;
 		double avgNrOfWordsTitle = peakModel.avgNumberOfWordsInTitle/numberofQueries;
-		
+
+		double avgPeakDaysPercent = peakModel.avgPeakDays/numberofQueries;
+
 		System.out.println("N:"+N);
 		System.out.println("avgNumberOfDocs:"+avgNumberOfDocs);
+		System.out.println("avgPeakDaysPercent:"+avgPeakDaysPercent);
 		System.out.println("avgDocsInPeaks:"+avgDocsInPeaks+"("+avgDocsInPeaksPercent+")");
 		System.out.println("avgTopDocsInPeaks:"+avgTopDocsInPeaks+"("+avgTopDocsInPeaksPercent+")");
 		System.out.println("avgWordsLengthInTitle:"+avgWordsLengthTitle+"\t avgNumberOfWordsInTitle:"+avgNrOfWordsTitle);
 		System.out.println(avgNumberOfDocs+" & "+avgDocsInPeaks+"("+avgDocsInPeaksPercent+") & "+avgTopDocsInPeaks+"("+avgTopDocsInPeaksPercent+")");
-		//Helper.writeLineToFile("/Users/mimis/Desktop/csvBurst.txt", avgTopDocsInPeaksPercent+"\n", true, false);
 		
-		Helper.writeLineToFile("nrOfDocsForPeakDetection.txt", avgTopDocsInPeaksPercent+"\t", true, true);
+		//Helper.writeLineToFile("/Users/mimis/Desktop/csvBurst.txt", avgTopDocsInPeaksPercent+"\n", true, false);
+		//Helper.writeLineToFile("nrOfDocsForPeakDetection.txt", avgTopDocsInPeaksPercent+"\t", true, true);
+//		Helper.writeLineToFile("nrOfDocsForPeakDetection.txt", avgPeakDaysPercent+"\t", true, true);
 
 	}
 	
