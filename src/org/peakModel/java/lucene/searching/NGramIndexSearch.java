@@ -13,8 +13,6 @@ import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.Scorer;
 import org.peakModel.java.peakModel.NGram;
-import org.peakModel.java.peakModel.burstiness.Burst;
-import org.peakModel.java.peakModel.burstiness.Burstiness;
 
 public class NGramIndexSearch implements Runnable {
 	private final List<NGram> ngramList;
@@ -103,9 +101,17 @@ public class NGramIndexSearch implements Runnable {
 		else{
 //			int docId = hits[0].doc;
 			final Document doc = searcher.doc(docIds.get(0));
-			final int tfCorpus =  Integer.parseInt(doc.get("totalFrequency"));
+			int tfCorpus =  Integer.parseInt(doc.get("totalFrequency"));
 			final String freqPerYear = doc.get("freqPerYear");
-			final int tfYear = getTfOfYear(year, freqPerYear);
+			int tfYear = getTfOfYear(year, freqPerYear);
+			
+			//CORRECT THE MALAKIA THAT THEY DID BY INCREASING THE COUNTS BY 2
+			if(tfYear != 0)
+				tfYear = (tfYear / 2) + 1;
+			
+			if(tfCorpus != 0)
+				tfCorpus = (tfCorpus / 2) + 1;
+					
 			ngram.setTf_peak(tfYear);
 			ngram.setTf_corpus(tfCorpus);
 			ngram.setNr_of_years_appearance(freqPerYear.split(",").length);

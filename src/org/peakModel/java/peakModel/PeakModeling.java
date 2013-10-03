@@ -516,7 +516,7 @@ public class PeakModeling {
         	ngram.computeDicePeak(N_query_peakPeriod);
         	ngram.computePhiSquareCorpus(N_query_peakPeriod, N_corpus);
         	ngram.computePhiSquarePeak(N_query_peakPeriod, N_peak);
-//        	ngram.computeTF_IDF(N_years,maxTF_query_peak);
+        	ngram.computeTF_IDF(N_years,maxTF_query_peak);
         	ngram.computeMY_APPROACH();
         }
 	}

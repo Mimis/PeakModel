@@ -65,7 +65,7 @@ public class FeatureSelection extends PeakModeling2{
 		final boolean useForSearchOnlyTitle = false;
 		final int burstTimeSpan = 7;
 	    final double x = 2.0;
-		final int MAX_DOCS = 400;
+		final int MAX_DOCS = 4000;
 		boolean scoreDocs=true;
 		boolean useDocFreqForBurstDetection=true;
 	    int topFeatures = 25;//how many documents should we consider? TOTAL number of DOcs / N = number of docs to consider
@@ -113,21 +113,25 @@ public class FeatureSelection extends PeakModeling2{
 				 * Global LOG likelihood
 				 */
 				LanguageModel lang = allDocsLanguageModelList.get(allDocsLanguageModelList.indexOf(new LanguageModel(minN)));
+				System.out.println("Total number of feature candidates:"+lang.getNgramList().size());
 				peakModel.getNgramPerYearSTats(lang.getNgramList(),25,entry.getValue());
 		    	Collections.sort(lang.getNgramList(), NGram.COMPARATOR_LOG_CORPUS);
-				
+//		    	Collections.sort(lang.getNgramList(), NGram.COMPARATOR_LOG_PEAK);
+
 		    	
 		    	
 		    	/**
 		    	 * Get top features
 		    	 */
-		    	List<String> bestFeaturesList = getBestFeatures(lang.getNgramList(), topFeatures,entry.getKey());
+		    	List<NGram> bestFeaturesList = getBestFeatures(lang.getNgramList(), topFeatures,entry.getKey());
 				
 				
 		    	/**
+		    	 * #EVALUATION...
 		    	 * Check Burstiness overlaping between Query and Features
 		    	 */
-		    	peakModel.detectBurstPeriodsForBestFeatures(queryTemporalProfile.getAllBurstDatesSet(),bestFeaturesList, date, x, scoreDocs, useDocFreqForBurstDetection);
+		    	double similarityProportionThreshold = 0.25;//if the common peak days is higher than this threshold then the feature is relevant
+		    	peakModel.evaluateBestFeatures(queryTemporalProfile.getAllBurstDatesSet(),bestFeaturesList, date, x, scoreDocs, useDocFreqForBurstDetection,similarityProportionThreshold);
 				
 		    	
 		    	
@@ -146,15 +150,44 @@ public class FeatureSelection extends PeakModeling2{
 //	    }
 	}
 	
-	
-	public void detectBurstPeriodsForBestFeatures(Set<String> queryBurstDays,List<String> featureList, String date, double x,boolean scoreDocs,boolean useDocFreqForBurstDetection) throws ParseException, IOException, java.text.ParseException{
+	/**
+	 * Evaluate features based on the common number of peak days with the query ones.
+	 * @param queryBurstDays
+	 * @param featureList
+	 * @param date
+	 * @param x
+	 * @param scoreDocs
+	 * @param useDocFreqForBurstDetection
+	 * @throws ParseException
+	 * @throws IOException
+	 * @throws java.text.ParseException
+	 */
+	public void evaluateBestFeatures(Set<String> queryBurstDays,List<NGram> featureList, String date, double x,boolean scoreDocs,boolean useDocFreqForBurstDetection,double similarityProportionThreshold) throws ParseException, IOException, java.text.ParseException{
+		List<NGram> relevantFeatures = new ArrayList<NGram>();
+		List<NGram> nonRelevantFeatures = new ArrayList<NGram>();
     	System.out.println("#Query Burst Days:"+queryBurstDays.size());
-		for(String feature:featureList){
-			FeatureTemporalProfile featureTemporalProfile = runQuery(feature,date,this, x,scoreDocs,useDocFreqForBurstDetection);
+		for(NGram feature:featureList){
+			FeatureTemporalProfile featureTemporalProfile = runQuery(feature.getNgram(),date,this, x,scoreDocs,useDocFreqForBurstDetection);
 	    	Set<String> common = new HashSet<String>(queryBurstDays);
 	    	common.retainAll(featureTemporalProfile.getAllBurstDatesSet());
-	    	System.out.println("#Feature:"+feature+"\tBurst Days:"+featureTemporalProfile.getAllBurstDatesSet().size()+"\tCommon HITS:"+common.size());
+	    	
+	    	double hitsRatio = (double) common.size() / featureTemporalProfile.getAllBurstDatesSet().size();
+	    	if(hitsRatio >= similarityProportionThreshold)
+	    		relevantFeatures.add(feature);
+	    	else
+	    		nonRelevantFeatures.add(feature);
+	    	
+	    	System.out.println("#Feature:"+feature.getNgram()+"("+this.getDocumentList().size()+")\tBurst Days:"+featureTemporalProfile.getAllBurstDatesSet().size()+"\tCommon HITS:"+common.size()+"("+hitsRatio+")");
 		}
+		
+		double precision = (double)relevantFeatures.size()/featureList.size();
+		System.out.println("\n#Relevant Features:"+precision);
+		for(NGram f:relevantFeatures)
+			System.out.println("\t"+f.getNgram()+"\t tf_q_peak:"+f.getTf_query_peak()+"\t tf_peak:"+f.getTf_peak()+"\t tf_corpus:"+f.getTf_corpus());
+		
+		System.out.println("\n#NOT Relevant Features:");
+		for(NGram f:nonRelevantFeatures)
+			System.out.println("\t"+f.getNgram()+"\t tf_q_peak:"+f.getTf_query_peak()+"\t tf_peak:"+f.getTf_peak()+"\t tf_corpus:"+f.getTf_corpus());
 	}
 	
 	
@@ -166,17 +199,17 @@ public class FeatureSelection extends PeakModeling2{
 	 * @param topN
 	 * @param query
 	 */
-	public static List<String> getBestFeatures(List<NGram> NGramList,int topN,String query){
-		List<String> bestFeatureList = new ArrayList<String>();
+	public static List<NGram> getBestFeatures(List<NGram> NGramList,int topN,String query){
+		List<NGram> bestFeatureList = new ArrayList<NGram>();
 		List<String> queryList = new ArrayList<String>(Arrays.asList(query.toLowerCase().split("\\s")));
 //    	System.out.println("########################################");
-    	int c=0;
+    	int c=1;
        	for(NGram ng:NGramList){
        		if(queryList.contains(ng.getNgram())) 
        			continue;
 //       		System.out.println(ng.getNgram()+"\t"+ng.getTf_query_peak());
-       		bestFeatureList.add(ng.getNgram());
-       		if(c++ > topN)
+       		bestFeatureList.add(ng);
+       		if(c++ >= topN)
        			break;
        	}
 //       	System.out.println("########################################");
@@ -280,8 +313,7 @@ public class FeatureSelection extends PeakModeling2{
 		queryToDateMap.put("Recessie", "1975");
 		queryToDateMap.put("Krakers", "1981");
 		queryToDateMap.put("Beatrix", "1965");
-		
-//		queryToDateMap.put("griekenland", "1967");
+		queryToDateMap.put("griekenland", "1967");
 
 		return queryToDateMap;
 	}
