@@ -50,13 +50,14 @@ public class PeakModeling2 {
 		//burst detection...
 		final int burstTimeSpan = 7;
 	    final double x = 2.0;
+	    //get documents
+		final boolean scoreDocuments =true;
 		//==========================================================End Parameters==========================================================//
 
 		
 		
 		
 		    
-		
 		
 		
 		
@@ -83,7 +84,7 @@ public class PeakModeling2 {
 		 * Get documents based on given query
 		 */
 		int max_number_of_documents = -1;//-1 for using the default value
-		peakModel.getKbDocs(query,date,true,max_number_of_documents);
+		peakModel.getKbDocs(query,date,scoreDocuments,max_number_of_documents);
 	    System.out.println("#Total Retrieve Documents run time:"+ (System.currentTimeMillis()-startTime)/1000);
 
 	    
@@ -115,6 +116,9 @@ public class PeakModeling2 {
         System.out.println("#Total LanguageModels run time:"+ (System.currentTimeMillis()-startTime)/1000);
 		
 
+        
+        
+        
 		/**
 		 * Statistical Measures between burst against non burst features
 		 * 	HERE I CAN CALCULATE THE LOGS AS MAARTEN DE RIJK FOR FACETS BY COMPARING THE BURSTS NGRAMS WITH THE WHOLE RELEVANT DOCUMENT SET
@@ -137,7 +141,7 @@ public class PeakModeling2 {
 		 * Statistical Measures against the whole corpus
 		 * Get best ngrams based on Log_corpus measure
 		 */
-		LanguageModel lang = allDocsLanguageModelList.get(burstLanguageModelList.indexOf(new LanguageModel(minN)));
+		LanguageModel lang = allDocsLanguageModelList.get(allDocsLanguageModelList.indexOf(new LanguageModel(minN)));
 //		LanguageModel lang = burstLanguageModelList.get(burstLanguageModelList.indexOf(new LanguageModel(minN)));
 //		LanguageModel lang = noBurstLanguageModelList.get(noBurstLanguageModelList.indexOf(new LanguageModel(minN)));
 		peakModel.getNgramPerYearSTats(lang.getNgramList(),25,date);
@@ -403,15 +407,15 @@ public class PeakModeling2 {
     	PeakModeling.calculateProbabilitiesAndMeasures(finalNGramList, null, minN, N_corpus, N_query_peakPeriod, N_peak, N_years, maxTF_query_peak);
 
     	//Display top N based on Log Corpus
-    	System.out.println("### top ngrams cpmapred whole corpus ####");
-    	Collections.sort(finalNGramList, NGram.COMPARATOR_LOG_CORPUS);
-    	int c=0;
-       	for(NGram ng:finalNGramList){
-       		System.out.println(ng.getNgram()+"\t"+ng.getLOG_Likelyhood_corpus());
-       		if(c++ > topN)
-       			break;
-       	}
-       	System.out.println("########################################");
+//    	System.out.println("### top ngrams cpmapred whole corpus ####");
+//    	Collections.sort(finalNGramList, NGram.COMPARATOR_LOG_CORPUS);
+//    	int c=0;
+//       	for(NGram ng:finalNGramList){
+//       		System.out.println(ng.getNgram()+"\t"+ng.getLOG_Likelyhood_corpus());
+//       		if(c++ > topN)
+//       			break;
+//       	}
+//       	System.out.println("########################################");
 	}
 	
 	
@@ -713,6 +717,8 @@ public class PeakModeling2 {
 	 * @throws IOException
 	 */
 	public void getKbDocs(String query,String date,boolean scoreDocs,int max_documents) throws ParseException, IOException{
+//        long startTime = System.currentTimeMillis();
+
 		TopDocs topDocs = null;
 		if(scoreDocs){
 			topDocs = HelperLucene.queryIndexGetTopDocs(this.queryParser,this.kbSearcher, constructQuery(query,date),max_documents!=-1?max_documents:this.MAX_DOCS);
@@ -725,7 +731,7 @@ public class PeakModeling2 {
 		queryDocFreqPerDayMap = new HashMap<String,Integer>();
 		documentList = new LinkedHashSet<KbDocument>();
 		
-
+//	    System.out.println("Get the Top Docs time(no parsing):"+ (System.currentTimeMillis()-startTime));
         if(hits.length==0){
         	System.out.println("Zero Results :/");
         }else{
@@ -768,8 +774,7 @@ public class PeakModeling2 {
 					
 					rank++;
 				}		
-				
-				
+
 				
 				//Save document rank per day
 //				int TopK = 5;
@@ -836,7 +841,7 @@ public class PeakModeling2 {
 	 * Get per Year Stats(N_peak,N_corpus,N_years) and NGram Index/Searcher
 	 * @throws IOException
 	 */
-	private void getPerYearStats(String date) throws IOException{
+	public void getPerYearStats(String date) throws IOException{
         /**
 		 * Get peak period Maps:  
 		 * 		N_peak_period
