@@ -45,7 +45,7 @@ public class DocumentSelection extends PeakModeling2{
 	 */
 	public static void main(String[] args)  throws IOException, ParseException, java.text.ParseException {
 		//========================================================== Input Parameters ==========================================================//
-		final boolean useStopWords = true;
+		final boolean useStopWords = false;
 		final int minN = 2;
 		final int maxN = 2;
 		final int NUMBER_THREADS = 2;

@@ -625,6 +625,15 @@ public class PeakModeling2 {
 
 
 	/**
+	 * @return the stopWords
+	 */
+	public List<String> getStopWords() {
+		return stopWords;
+	}
+
+
+
+	/**
 	 * @param queryTotalDocScorePerDayMap the queryTotalDocScorePerDayMap to set
 	 */
 	public void setQueryTotalDocScorePerDayMap(

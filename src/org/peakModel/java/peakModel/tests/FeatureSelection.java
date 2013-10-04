@@ -23,15 +23,9 @@ import org.peakModel.java.peakModel.document_process.KbDocument;
 import org.peakModel.java.utils.Helper;
 
 public class FeatureSelection extends PeakModeling2{
-	double avgNumberOfWordsInTitle = 0;
+	double avgPrecision = 0;
 	double avgNumberOfWordsLengthInTitle = 0;
-	double avgNumberOfDocs = 0;
-	double avgDocsInPeaks = 0;
-	double avgTopDocsInPeaks = 0;
-	double avgDocsInPeaksPercent = 0;
-	double avgTopDocsInPeaksPercent = 0;
-
-	double avgPeakDays = 0;
+	double avgNumberOfWordsInTitle = 0;
 
 	public FeatureSelection(
 			boolean useForSearchOnlyTitle, boolean useStopWords, int minN,
@@ -51,7 +45,7 @@ public class FeatureSelection extends PeakModeling2{
 	 */
 	public static void main(String[] args)  throws IOException, ParseException, java.text.ParseException {
 		//========================================================== Input Parameters ==========================================================//
-		final boolean useStopWords = true;
+		final boolean useStopWords = false;
 		final int NUMBER_THREADS = 2;
 		final int MAX_TITLE_LENGTH = 100;
 		final int MIN_TITLE_LENGTH = 1;
@@ -65,89 +59,119 @@ public class FeatureSelection extends PeakModeling2{
 		final boolean useForSearchOnlyTitle = false;
 		final int burstTimeSpan = 7;
 	    final double x = 2.0;
-		final int MAX_DOCS = 4000;
-		boolean scoreDocs=true;
-		boolean useDocFreqForBurstDetection=true;
-	    int topFeatures = 25;//how many documents should we consider? TOTAL number of DOcs / N = number of docs to consider
+		final int MAX_DOCS = 400;
+		final boolean scoreDocs=true;
+		final boolean useDocFreqForBurstDetection=true;
+		final int topFeatures = 25;//how many documents should we consider? TOTAL number of DOcs / N = number of docs to consider
+	    
+	    
+		final double similarityProportionThreshold = 0.25;//if the common peak days is higher than this threshold then the feature is relevant
+
 	    
 	    
 	    
 	    
 	    
+		//========================================================== Main ==========================================================//	    	
+	    FeatureSelection peakModel = new FeatureSelection(useForSearchOnlyTitle, useStopWords, minN, maxN, NUMBER_THREADS, MAX_DOCS, MAX_TITLE_LENGTH, MIN_TITLE_LENGTH, burstTimeSpan);
+
 	    
-	    
-	    
-		//========================================================== Main ==========================================================//
-//	    for(int MAX_DOCS=100;MAX_DOCS<1500;MAX_DOCS+=50){
+		for(Map.Entry<String, String> entry: getQueryList().entrySet()){
+	        long startTime = System.currentTimeMillis();
+	        String date = entry.getValue();
+	        String query = entry.getKey();
+			System.out.println("\n##############\n"+query+"\t"+date);
+	
+			peakModel.getPerYearStats(entry.getValue());
+			FeatureTemporalProfile queryTemporalProfile = peakModel.runQuery(entry.getKey(),entry.getValue(),peakModel, x,scoreDocs,useDocFreqForBurstDetection);
+			
+			
+	        /**
+	         * Create Language models for each class(Burst,NonBurst);Ngram Candidate lists form each document set with length 1 to 3
+	         */
+	        //BURSTs DOCS:get all documents that are published on the burst period and extract Ngram Models
+			Set<KbDocument> burstDocList = peakModel.getBurstsDocumentsList(queryTemporalProfile);
+			List<LanguageModel> burstLanguageModelList = createLanguageModels(burstDocList, minN, maxN);
+			//NON BURSTS DOCS:get all documents that are NOT published on the burst period and extract Ngram Models
+			Set<KbDocument> nonBurstDocList = peakModel.getNonBurstsDocumentsList(queryTemporalProfile);
+			List<LanguageModel> noBurstLanguageModelList = createLanguageModels(nonBurstDocList, minN, maxN);
+			//ALL DOCUMENTS
+			List<LanguageModel> allDocsLanguageModelList = createLanguageModels(peakModel.getDocumentList(), minN, maxN);
+			
+
+
+		    	    	
+	    	/**
+	    	 * Feature Scoring..
+	    	 */
+			LanguageModel lang = peakModel.featureSelection(date, minN, allDocsLanguageModelList, burstLanguageModelList, noBurstLanguageModelList);
 	    	
-		    FeatureSelection peakModel = new FeatureSelection(useForSearchOnlyTitle, useStopWords, minN, maxN, NUMBER_THREADS, MAX_DOCS, MAX_TITLE_LENGTH, MIN_TITLE_LENGTH, burstTimeSpan);
+			
+	    	/**
+	    	 * Get top features(do not include the query!!)
+	    	 */
+	    	List<NGram> bestFeaturesList = getBestFeatures(lang.getNgramList(), topFeatures,entry.getKey());
+			
+			
+	    	/**
+	    	 * #EVALUATION...
+	    	 * Check Burstiness overlaping between Query and Features
+	    	 */
+	    	peakModel.evaluateBestFeatures(query.toLowerCase(),queryTemporalProfile.getAllBurstDatesSet(),bestFeaturesList, date, x, scoreDocs, useDocFreqForBurstDetection,similarityProportionThreshold);
+			
+	    	
+	    	
+//			peakModel.calculateHeadlinesStatistics(peakModel);
+//			Helper.displayBurstsPeriods(queryTemporalProfile);	
+//			displayQueryMovingAvg(queryTemporalProfile);
+			//displayQueryDistribution(queryTemporalProfile,peakModel);
+			//displayTopBottomDocsDistribution(peakModel, 145);
+			//testParsimonious(queryTemporalProfile, peakModel,backgroundFile,foregroundFile);
+			
+		    System.out.println("#Total run time:"+ (System.currentTimeMillis()-startTime));
+		}	
+		//Close Indexes
+        peakModel.closeIndexes();
+        
+        
+        ///
+		Helper.writeLineToFile("nrOfDocsForPeakDetection.txt", (double) peakModel.avgPrecision/getQueryList().entrySet().size()+"\t", true, true);
+        System.out.println("\n\n#########\nAveragePrecision:"+ (double) peakModel.avgPrecision/getQueryList().entrySet().size());
 
-		    
-			for(Map.Entry<String, String> entry: getQueryList().entrySet()){
-		        long startTime = System.currentTimeMillis();
-		        String date = entry.getValue();
-		        String query = entry.getKey();
-				System.out.println("\n"+query+"\t"+date);
-		
-				peakModel.getPerYearStats(entry.getValue());
-				FeatureTemporalProfile queryTemporalProfile = peakModel.runQuery(entry.getKey(),entry.getValue(),peakModel, x,scoreDocs,useDocFreqForBurstDetection);
-				
-				
-		        /**
-		         * Create Language models for each class(Burst,NonBurst);Ngram Candidate lists form each document set with length 1 to 3
-		         */
-		        //BURSTs DOCS:get all documents that are published on the burst period and extract Ngram Models
-				Set<KbDocument> burstDocList = peakModel.getBurstsDocumentsList(queryTemporalProfile);
-				List<LanguageModel> burstLanguageModelList = createLanguageModels(burstDocList, minN, maxN);
-				//NON BURSTS DOCS:get all documents that are NOT published on the burst period and extract Ngram Models
-				Set<KbDocument> nonBurstDocList = peakModel.getNonBurstsDocumentsList(queryTemporalProfile);
-				List<LanguageModel> noBurstLanguageModelList = createLanguageModels(nonBurstDocList, minN, maxN);
-				//ALL DOCUMENTS
-				List<LanguageModel> allDocsLanguageModelList = createLanguageModels(peakModel.getDocumentList(), minN, maxN);
-				
+	}
 
-			    
-			    
-			    
-				/**
-				 * Global LOG likelihood
-				 */
-				LanguageModel lang = allDocsLanguageModelList.get(allDocsLanguageModelList.indexOf(new LanguageModel(minN)));
-				System.out.println("Total number of feature candidates:"+lang.getNgramList().size());
-				peakModel.getNgramPerYearSTats(lang.getNgramList(),25,entry.getValue());
-		    	Collections.sort(lang.getNgramList(), NGram.COMPARATOR_LOG_CORPUS);
-//		    	Collections.sort(lang.getNgramList(), NGram.COMPARATOR_LOG_PEAK);
+	/**
+	 * Feature scoring..
+	 * @param date
+	 * @param featureLevel
+	 * @param allDocsLanguageModelList
+	 * @param burstLanguageModelList
+	 * @param noBurstLanguageModelList
+	 * @return
+	 */
+	public LanguageModel featureSelection(String date,int featureLevel,List<LanguageModel> allDocsLanguageModelList,List<LanguageModel> burstLanguageModelList,List<LanguageModel> noBurstLanguageModelList){
 
-		    	
-		    	
-		    	/**
-		    	 * Get top features
-		    	 */
-		    	List<NGram> bestFeaturesList = getBestFeatures(lang.getNgramList(), topFeatures,entry.getKey());
-				
-				
-		    	/**
-		    	 * #EVALUATION...
-		    	 * Check Burstiness overlaping between Query and Features
-		    	 */
-		    	double similarityProportionThreshold = 0.25;//if the common peak days is higher than this threshold then the feature is relevant
-		    	peakModel.evaluateBestFeatures(queryTemporalProfile.getAllBurstDatesSet(),bestFeaturesList, date, x, scoreDocs, useDocFreqForBurstDetection,similarityProportionThreshold);
-				
-		    	
-		    	
-	//			peakModel.calculateHeadlinesStatistics(peakModel);
-	//			Helper.displayBurstsPeriods(queryTemporalProfile);	
-	//			displayQueryMovingAvg(queryTemporalProfile);
-				//displayQueryDistribution(queryTemporalProfile,peakModel);
-				//displayTopBottomDocsDistribution(peakModel, 145);
-				//testParsimonious(queryTemporalProfile, peakModel,backgroundFile,foregroundFile);
-				
-			    System.out.println("#Total run time:"+ (System.currentTimeMillis()-startTime));
-			}	
-			//Close Indexes
-	        peakModel.closeIndexes();
+		/**
+		 * Global LOG likelihood
+		 */
+		LanguageModel lang = noBurstLanguageModelList.get(noBurstLanguageModelList.indexOf(new LanguageModel(featureLevel)));
+		getNgramPerYearSTats(lang.getNgramList(),25,date);
+    	Collections.sort(lang.getNgramList(), NGram.COMPARATOR_LOG_CORPUS);
+//    	Collections.sort(lang.getNgramList(), NGram.COMPARATOR_LOG_PEAK);
 
-//	    }
+		/**
+		 * Log compare Burst against non Burst
+		 */
+//		LanguageModel lang = burstLanguageModelList.get(burstLanguageModelList.indexOf(new LanguageModel(featureLevel)));
+//		LanguageModel m2 = noBurstLanguageModelList.get(noBurstLanguageModelList.indexOf(new LanguageModel(featureLevel)));
+////		LanguageModel m2 = allDocsLanguageModelList.get(allDocsLanguageModelList.indexOf(new LanguageModel(featureLevel)));
+//		measureSignificanceOfTermsInBurstAgainstNonBurstDocs(lang, m2);
+//    	Collections.sort(lang.getNgramList(), NGram.COMPARATOR_LOG_LIKELIHOOD_BURST);
+
+    	
+    	
+		System.out.println("Total number of feature candidates:"+lang.getNgramList().size());
+    	return lang;
 	}
 	
 	/**
@@ -162,26 +186,54 @@ public class FeatureSelection extends PeakModeling2{
 	 * @throws IOException
 	 * @throws java.text.ParseException
 	 */
-	public void evaluateBestFeatures(Set<String> queryBurstDays,List<NGram> featureList, String date, double x,boolean scoreDocs,boolean useDocFreqForBurstDetection,double similarityProportionThreshold) throws ParseException, IOException, java.text.ParseException{
+	public void evaluateBestFeatures(String query,Set<String> queryBurstDays,List<NGram> featureList, String date, double x,boolean scoreDocs,boolean useDocFreqForBurstDetection,double similarityProportionThreshold) throws ParseException, IOException, java.text.ParseException{
 		List<NGram> relevantFeatures = new ArrayList<NGram>();
 		List<NGram> nonRelevantFeatures = new ArrayList<NGram>();
-    	System.out.println("#Query Burst Days:"+queryBurstDays.size());
 		for(NGram feature:featureList){
-			FeatureTemporalProfile featureTemporalProfile = runQuery(feature.getNgram(),date,this, x,scoreDocs,useDocFreqForBurstDetection);
-	    	Set<String> common = new HashSet<String>(queryBurstDays);
-	    	common.retainAll(featureTemporalProfile.getAllBurstDatesSet());
+			//execute query
+			FeatureTemporalProfile featureTemporalProfile = runQuery(Helper.replaceStopWordWitUnderScore(feature.getNgram(), getStopWords()),date,this, x,scoreDocs,useDocFreqForBurstDetection);
 	    	
+			/**
+			 * Relevant if got common Peak Days...
+			 */
+			Set<String> common = new HashSet<String>(queryBurstDays);
+	    	common.retainAll(featureTemporalProfile.getAllBurstDatesSet());
 	    	double hitsRatio = (double) common.size() / featureTemporalProfile.getAllBurstDatesSet().size();
-	    	if(hitsRatio >= similarityProportionThreshold)
+//	    	if(hitsRatio >= similarityProportionThreshold)
+//	    		relevantFeatures.add(feature);
+//	    	else
+//	    		nonRelevantFeatures.add(feature);
+	    	
+	    	/**
+			 * Relevant if feature's top docs include the query..
+			 */
+	    	int countQueryOccurncesInTopDocs = 0;
+	    	for(KbDocument doc:getDocumentList()){
+	    		//System.out.println(doc.getScore()+"\t"+doc.getTitle());
+	    		if(doc.getTitle().toLowerCase().contains(query))countQueryOccurncesInTopDocs++;
+	    		if(doc.getRank()>25)break;
+	    	}
+//	    	if(countQueryOccurncesInTopDocs > 0)
+//	    		relevantFeatures.add(feature);
+//	    	else
+//	    		nonRelevantFeatures.add(feature);
+
+	    	
+	    	
+	    	if(hitsRatio >= similarityProportionThreshold && countQueryOccurncesInTopDocs > 0)
 	    		relevantFeatures.add(feature);
 	    	else
 	    		nonRelevantFeatures.add(feature);
-	    	
-	    	System.out.println("#Feature:"+feature.getNgram()+"("+this.getDocumentList().size()+")\tBurst Days:"+featureTemporalProfile.getAllBurstDatesSet().size()+"\tCommon HITS:"+common.size()+"("+hitsRatio+")");
+
+	    	System.out.println("#Feature:"+feature.getNgram()+"("+this.getDocumentList().size()+")\tBurst Days:"+featureTemporalProfile.getAllBurstDatesSet().size()+"\tCommon HITS:"+common.size()+"("+hitsRatio+")"+"\tcountQueryOccurncesInTopDocs:"+countQueryOccurncesInTopDocs+"\n");
 		}
-		
 		double precision = (double)relevantFeatures.size()/featureList.size();
-		System.out.println("\n#Relevant Features:"+precision);
+		avgPrecision+=precision;
+		
+		
+		//visualization...
+		System.out.println("\n#Relevant Features(precision):"+precision);
+		Helper.writeLineToFile("nrOfDocsForPeakDetection.txt", precision+"\t", true, true);
 		for(NGram f:relevantFeatures)
 			System.out.println("\t"+f.getNgram()+"\t tf_q_peak:"+f.getTf_query_peak()+"\t tf_peak:"+f.getTf_peak()+"\t tf_corpus:"+f.getTf_corpus());
 		
@@ -201,7 +253,7 @@ public class FeatureSelection extends PeakModeling2{
 	 */
 	public static List<NGram> getBestFeatures(List<NGram> NGramList,int topN,String query){
 		List<NGram> bestFeatureList = new ArrayList<NGram>();
-		List<String> queryList = new ArrayList<String>(Arrays.asList(query.toLowerCase().split("\\s")));
+		List<String> queryList = new ArrayList<String>(Arrays.asList(query.toLowerCase().split("\\s")));queryList.add(query.toLowerCase());
 //    	System.out.println("########################################");
     	int c=1;
        	for(NGram ng:NGramList){
@@ -282,7 +334,8 @@ public class FeatureSelection extends PeakModeling2{
 	
 	
 	
-	
+
+
 	
 	public FeatureTemporalProfile runQuery(String query,String date,PeakModeling2 peakModel,double x,boolean scoreDocs,boolean useDocFreqForBurstDetection) throws ParseException, IOException, java.text.ParseException{
 		//System.out.println("Nr of docs:"+peakModel.getNrOfDocs());
@@ -307,71 +360,15 @@ public class FeatureSelection extends PeakModeling2{
 
 	public static Map<String,String> getQueryList(){
 		Map<String,String> queryToDateMap = new HashMap<String,String>();
-		queryToDateMap.put("lockheed", "1976");
-		queryToDateMap.put("NSB", "1979");
-		queryToDateMap.put("Haagse Post", "1974");
-		queryToDateMap.put("Recessie", "1975");
-		queryToDateMap.put("Krakers", "1981");
+//		queryToDateMap.put("lockheed", "1976");
+//		queryToDateMap.put("NSB", "1979");
+//		queryToDateMap.put("Haagse Post", "1974");
+//		queryToDateMap.put("Recessie", "1975");
+//		queryToDateMap.put("Krakers", "1981");
 		queryToDateMap.put("Beatrix", "1965");
-		queryToDateMap.put("griekenland", "1967");
-
+//		queryToDateMap.put("griekenland", "1967");
 		return queryToDateMap;
 	}
 
 	
-	
-	/**
-	 * Display query;s distribution together with the TOP scored documents.
-	 * @param peakModel
-	 * @param N
-	 * @return
-	 */
-	public Map<String,Integer> getTopDocsDistribution(PeakModeling2 peakModel,int N){
-		KbDocument[] docs=peakModel.getDocumentList().toArray(new KbDocument[peakModel.getDocumentList().size()]);
-		Map<String,Integer> docDateToDfMap = new HashMap<String,Integer>();
-		int last = N>docs.length ? docs.length:N;
-//		for(int i=0;i<last;i++){
-		for(int i=docs.length-1;i>=docs.length-N;i--){
-
-			String date = docs[i].getDate();
-			if(docDateToDfMap.containsKey(date))
-				docDateToDfMap.put(date, docDateToDfMap.get(date)+1);
-			else
-				docDateToDfMap.put(date, 1);
-		}
-		return docDateToDfMap;
-	}
-	
-	public void diaplsyQueryDistributionAndDocsInPeaks(FeatureTemporalProfile queryTemporalProfile,FeatureSelection peakModel){
-		Map<String, Integer> topDocsDistribution = peakModel.getTopDocsDistribution(peakModel, 1000);
-		for(Map.Entry<String, Integer> entry2: queryTemporalProfile.getFeatureDocFreqPerDayMap().entrySet()){
-			int topD=0;
-			if(topDocsDistribution.containsKey(entry2.getKey()))
-				topD=topDocsDistribution.get(entry2.getKey());
-			System.out.println(entry2.getKey()+","+entry2.getValue()+","+topD);
-			
-		}
-
-	}
-
-	public static Map<String,Integer> displayTopBottomDocsDistribution(PeakModeling2 peakModel,int N){
-		Map<String,Integer> docDateToDfMap = new HashMap<String,Integer>();
-		KbDocument[] docs=peakModel.getDocumentList().toArray(new KbDocument[peakModel.getDocumentList().size()]);
-		int last = N>docs.length ? docs.length:N;
-		for(int i=0;i<last;i++){
-//		for(int i=docs.length-1;i>=docs.length-N;i--){
-			KbDocument doc=docs[i];
-			String date = docs[i].getDate();
-			if(docDateToDfMap.containsKey(date))
-				docDateToDfMap.put(date, docDateToDfMap.get(date)+1);
-			else
-				docDateToDfMap.put(date, 1);
-		}
-		for(Map.Entry<String, Integer> entry:docDateToDfMap.entrySet()){
-			double norm= (double) entry.getValue()/N;
-			System.out.println(entry.getKey()+","+norm);
-		}
-		return docDateToDfMap;
-	}
-
 }

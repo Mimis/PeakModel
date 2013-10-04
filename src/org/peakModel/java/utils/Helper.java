@@ -26,6 +26,21 @@ import org.peakModel.java.peakModel.document_process.KbDocument;
 
 public class Helper {
 
+	public static String replaceStopWordWitUnderScore(String feature,List<String> stopWordsList){
+		String[] feaArr = feature.split("\\s");
+		if(feaArr.length == 2){
+			StringBuilder buf = new StringBuilder();
+			for(String a:feaArr)
+				if(stopWordsList.contains(a))
+					buf.append("_ ");
+				else
+					buf.append(a+" ");
+			return buf.toString();
+		}
+		else
+			return feature;
+	}
+
 	public static void displayLanguageModelsByTFIDFpeak_year(List<LanguageModel> languageModelList,List<LanguageModel> negLanguageModelList, String name,List<String> stopWordsList,int minLength,int maxLength,int topN){
 		for(int ngramLength=minLength;ngramLength<=maxLength;ngramLength++){
 			LanguageModel lang = languageModelList.get(languageModelList.indexOf(new LanguageModel(ngramLength)));

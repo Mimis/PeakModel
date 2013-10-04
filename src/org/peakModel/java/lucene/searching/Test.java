@@ -23,12 +23,9 @@ public class Test {
 //?		van de	NrOfDaysAppear:8	TF:9	TFIDF:49.60577388390642
 //		de jong	NrOfDaysAppear:5	TF:8	TFIDF:49.51859647104014
 
-		int tf_query_peak_year = 8;
-		int nr_days_appear_peak_year = 5;
-		double idf = Helper.log2( ((double)365/nr_days_appear_peak_year));
-		double tf_idf = (double) (tf_query_peak_year) * idf;
+		String a="ROTTERDAM VAN TOEN";
 
-		System.out.println(tf_idf);
+		System.out.println(a.toLowerCase().contains("van toen"));
 		
 	}
 }
