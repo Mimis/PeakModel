@@ -74,6 +74,7 @@ public class ExplanationGeneration extends FeatureSelection{
 	    ExplanationGeneration peakModel = new ExplanationGeneration(useForSearchOnlyTitle, useStopWords, minN, maxN, NUMBER_THREADS, MAX_DOCS, MAX_TITLE_LENGTH, MIN_TITLE_LENGTH, burstTimeSpan);
 
 	    
+	    
 		for(Map.Entry<String, String> entry: getQueryList().entrySet()){
 	        long startTime = System.currentTimeMillis();
 	        String date = entry.getValue();
