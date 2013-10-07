@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.lucene.queryparser.classic.ParseException;
@@ -20,12 +21,29 @@ public class Test {
 	 * @throws ParseException 
 	 */
 	public static void main(String[] args) throws IOException, ParseException {
-//?		van de	NrOfDaysAppear:8	TF:9	TFIDF:49.60577388390642
-//		de jong	NrOfDaysAppear:5	TF:8	TFIDF:49.51859647104014
+		List<String> stopList = new ArrayList<String>(Arrays.asList("een","en"));
+		
+		String ngram="haagse";
+		List<String> queryList = new ArrayList<String>(Arrays.asList(ngram.toLowerCase().split("\\s")));queryList.add(ngram.toLowerCase());
 
-		String a="ROTTERDAM VAN TOEN";
-
-		System.out.println(a.toLowerCase().contains("van toen"));
+		String ngTest="een";
+		System.out.println(includeStopWord(ngTest,stopList));
 		
 	}
+	
+	
+	public static boolean includeQuery(String ngram,List<String> queryUnigrmasList){
+		for(String ng:ngram.split("\\s"))
+			if(queryUnigrmasList.contains(ng))
+				return true;
+		return false;
+	}
+	
+	public static boolean includeStopWord(String ngram,List<String> stopWordsList){
+		for(String ng:ngram.split("\\s"))
+			if(stopWordsList.contains(ng))
+				return true;
+		return false;
+	}
+
 }

@@ -890,6 +890,8 @@ public class NGram {
 			finalLogLikelihood += getLogLikeihoodOfSubNgrams(unigrams, langModel, ngramLevel);
 		}
 		setLOG_Likelyhood_burst(finalLogLikelihood);
+//		setLOG_Likelyhood_corpus(finalLogLikelihood); //this for log corpus BackOff modell
+
 	}
 	
 	private  double getLogLikeihoodOfSubNgrams(String unigrams[],LanguageModel langModel,int ngramLevel){
@@ -897,6 +899,7 @@ public class NGram {
 		for(String ngramText:createNgrams(unigrams,ngramLevel)){
 			NGram ngram = langModel.getNgram(ngramText, "title");
 			log_likelihood += ngram.getLOG_Likelyhood_burst();
+//			log_likelihood += ngram.getLOG_Likelyhood_corpus();  //this for log corpus BackOff modell
 		}
 		return log_likelihood;
 	}

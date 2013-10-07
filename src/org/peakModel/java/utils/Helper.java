@@ -25,6 +25,20 @@ import org.peakModel.java.peakModel.burstiness.FeatureTemporalProfile;
 import org.peakModel.java.peakModel.document_process.KbDocument;
 
 public class Helper {
+	public static boolean includeQuery(String ngram,List<String> queryUnigrmasList){
+		for(String ng:ngram.split("\\s"))
+			if(queryUnigrmasList.contains(ng))
+				return true;
+		return false;
+	}
+	
+	public static boolean includeStopWord(String ngram,List<String> stopWordsList){
+		for(String ng:ngram.split("\\s"))
+			if(stopWordsList.contains(ng))
+				return true;
+		return false;
+	}
+
 
 	public static String replaceStopWordWitUnderScore(String feature,List<String> stopWordsList){
 		String[] feaArr = feature.split("\\s");

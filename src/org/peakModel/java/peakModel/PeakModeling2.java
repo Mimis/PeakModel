@@ -174,19 +174,19 @@ public class PeakModeling2 {
         /**
          * 1. HITS count Explanation Generation: top N UNIGRAMS, no StopWords and Query Keywords
          */
-//		int featureType = 1;
+		int featureType = 1;
 		
 		//*CHOOSE FROM WHICH MODEL WE WILL GENERATE EXPLANATION
 //		LanguageModel LM = allDocsLanguageModelList.get(allDocsLanguageModelList.indexOf(new LanguageModel(featureType)));
-//		LanguageModel LM = burstLanguageModelList.get(burstLanguageModelList.indexOf(new LanguageModel(featureType)));
+		LanguageModel LM = burstLanguageModelList.get(burstLanguageModelList.indexOf(new LanguageModel(featureType)));
 		
 		//*CHOOSE TOP FEATURES BASED ON GIVEN MEASURE(for log_corpus we need global feature statistics)
-//		List<String> topFeatureList = peakModel.getTopFeatures(LM, 25,NGram.COMPARATOR_LOG_LIKELIHOOD_BURST);
+		List<String> topFeatureList = peakModel.getTopFeatures(query,LM, 25,NGram.COMPARATOR_LOG_LIKELIHOOD_BURST);
 //		List<String> topFeatureList = peakModel.getTopFeatures(LM, 25,NGram.COMPARATOR_TF_IDF_peak_year);
 //		List<String> topFeatureList = peakModel.getTopFeatures(LM, 25,NGram.COMPARATOR_LOG_CORPUS);
 
 		//generate explanations...
-//		peakModel.explanationGenerationHITS(topFeatureList,queryTemporalProfile);
+		peakModel.explanationGenerationHITS(topFeatureList,queryTemporalProfile);
 		
 		//display
 //		Collections.sort(peakModel.documentList,KbDocument.COMPARATOR_HITS);
@@ -761,7 +761,7 @@ public class PeakModeling2 {
 //				int titleTokenSize = title.split("\\s+").length;
 //				if(titleTokenSize > this.MAX_TITLE_LENGTH || titleTokenSize <= this.MIN_TITLE_LENGTH)
 //					continue;
-
+//				System.out.println(title+"\t"+doc.get("content"));
 
 				
 				//save current doc
@@ -863,6 +863,14 @@ public class PeakModeling2 {
 				this.N_corpus = peakPeriodMap.get("TotalWords");
 //				N_corpus = PeakModeling.totalFrequencies(fileWithTotalTFperYearUnigram, peakPeriodMap);
 
+				if(this.N_peak != 0)
+					this.N_peak = (this.N_peak / 2) + 1;
+				
+				if(this.N_corpus != 0)
+					this.N_corpus = (this.N_corpus / 2) + 1;
+
+				
+				
 				this.indexNgramDir = HelperLucene.getIndexDir(this.indexKbUnigramFileName);
 				this.ngramIndexReader = DirectoryReader.open(this.indexNgramDir);
 				this.nGramSearcher = new IndexSearcher(this.ngramIndexReader);
@@ -873,6 +881,56 @@ public class PeakModeling2 {
 	        	this.N_corpus = peakPeriodMap.get("TotalWords");
 //				N_corpus = PeakModeling.totalFrequencies(fileWithTotalTFperYearBigram, peakPeriodMap);
 
+	        	if(this.N_peak != 0)
+					this.N_peak = (this.N_peak / 2) + 1;
+				
+				if(this.N_corpus != 0)
+					this.N_corpus = (this.N_corpus / 2) + 1;
+
+	        	this.indexNgramDir = HelperLucene.getIndexDir(this.indexKbBigramFileName);
+	        	this.ngramIndexReader = DirectoryReader.open(this.indexNgramDir);
+	        	this.nGramSearcher = new IndexSearcher(this.ngramIndexReader);
+	        	this.N_years = this.peakPeriodMap.size() - 1 ;
+	        }
+        }        
+	}
+	public void getPerYearStats(String date,int ngramLevel) throws IOException{
+        /**
+		 * Get peak period Maps:  
+		 * 		N_peak_period
+		 * 		N_corpus(Year:TotalWords)
+		 */
+        if(date != null && !date.equals("null")){
+	        if(ngramLevel==1){
+				Helper.getPeakPeriodIndex(this.fileWithTotalTFperYearUnigram, this.peakPeriodMap);
+				this.N_peak = peakPeriodMap.get(date);//TODO this may return null pointer exception
+				this.N_corpus = peakPeriodMap.get("TotalWords");
+//				N_corpus = PeakModeling.totalFrequencies(fileWithTotalTFperYearUnigram, peakPeriodMap);
+
+				if(this.N_peak != 0)
+					this.N_peak = (this.N_peak / 2) + 1;
+				
+				if(this.N_corpus != 0)
+					this.N_corpus = (this.N_corpus / 2) + 1;
+
+				
+				
+				this.indexNgramDir = HelperLucene.getIndexDir(this.indexKbUnigramFileName);
+				this.ngramIndexReader = DirectoryReader.open(this.indexNgramDir);
+				this.nGramSearcher = new IndexSearcher(this.ngramIndexReader);
+				this.N_years = this.peakPeriodMap.size() - 1;
+	        }else{
+	        	Helper.getPeakPeriodIndex(fileWithTotalTFperYearBigram, peakPeriodMap);
+	        	this.N_peak = peakPeriodMap.get(date);//TODO this may return null pointer exception
+	        	this.N_corpus = peakPeriodMap.get("TotalWords");
+//				N_corpus = PeakModeling.totalFrequencies(fileWithTotalTFperYearBigram, peakPeriodMap);
+
+	        	if(this.N_peak != 0)
+					this.N_peak = (this.N_peak / 2) + 1;
+				
+				if(this.N_corpus != 0)
+					this.N_corpus = (this.N_corpus / 2) + 1;
+
 	        	this.indexNgramDir = HelperLucene.getIndexDir(this.indexKbBigramFileName);
 	        	this.ngramIndexReader = DirectoryReader.open(this.indexNgramDir);
 	        	this.nGramSearcher = new IndexSearcher(this.ngramIndexReader);
@@ -881,7 +939,7 @@ public class PeakModeling2 {
         }        
 
 	}
-	
+
 	private String constructQuery(String query,String dateGiven){
 		String queryFinal = "\""+ query + "\"";
 		String date = dateGiven.equals("null") ? null : dateGiven ;//year

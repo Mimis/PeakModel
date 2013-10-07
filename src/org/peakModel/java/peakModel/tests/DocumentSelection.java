@@ -319,7 +319,7 @@ public class DocumentSelection extends PeakModeling2{
 	
 	public FeatureTemporalProfile runQuery(String query,String date,PeakModeling2 peakModel,double x,boolean scoreDocs,boolean useDocFreqForBurstDetection) throws ParseException, IOException, java.text.ParseException{
 		//System.out.println("Nr of docs:"+peakModel.getNrOfDocs());
-		long startTime = System.currentTimeMillis();
+		//long startTime = System.currentTimeMillis();
 
 		/**
 		 * Get documents based on given query
@@ -333,7 +333,7 @@ public class DocumentSelection extends PeakModeling2{
 		else
 			queryTemporalProfile = Burstiness.measureBurstinessWithDocScoreForPeakYearMovingAverage(date, peakModel.getQueryTotalDocScorePerDayMap(),peakModel.getQueryDocFreqPerDayMap(), peakModel.getBurstTimeSpan(),x);	
         
-	    System.out.println("#Total Retrieve Documents run time:"+ (System.currentTimeMillis()-startTime));
+	    //System.out.println("#Total Retrieve Documents run time:"+ (System.currentTimeMillis()-startTime));
         return queryTemporalProfile;
 	}
 
