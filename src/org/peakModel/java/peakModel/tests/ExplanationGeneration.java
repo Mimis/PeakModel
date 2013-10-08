@@ -55,7 +55,7 @@ public class ExplanationGeneration extends FeatureSelection{
 		final int MAX_DOCS = 400;
 		final boolean scoreDocs=true;
 		final boolean useDocFreqForBurstDetection=true;
-		final int topFeatures = 25;//how many documents should we consider? TOTAL number of DOcs / N = number of docs to consider
+		final int topFeatures = 5;//how many documents should we consider? TOTAL number of DOcs / N = number of docs to consider
 	    
 	    
 		/*
@@ -63,8 +63,8 @@ public class ExplanationGeneration extends FeatureSelection{
 		 */
 		final int maxTitleHeadline = 10;
 		final int minTitleHeadline = 3;
-		final int topMHeadlines = 5;
-	    
+		final int topMHeadlines = 10;
+	    final double lamdaMMR = 0.7;
 	    
 	    
 		
@@ -115,8 +115,10 @@ public class ExplanationGeneration extends FeatureSelection{
 		    final boolean skipStopWordsDurringFeatureSelection = true;
 	    	List<NGram> bestFeaturesList = getBestFeatures(lang.getNgramList(), topFeatures,entry.getKey(), skipStopWordsDurringFeatureSelection, peakModel);
 			
-	    	for(NGram ng:bestFeaturesList)
-	    		System.out.println(ng.getNgram()+"\t"+ng.getTf_query_peak()+"\t"+ng.getLOG_Likelyhood_burst());
+
+	    	
+	    	
+	    	
 	    	
 	    	
 	    	//######
@@ -126,16 +128,12 @@ public class ExplanationGeneration extends FeatureSelection{
 	    	 * 	2.Cosine based LOG LIKELIHOOD
 	    	 * 	3.Cosine based on term frequencies for Baseline..
 	    	 */
-//			peakModel.explanationGenerationHITS(bestFeaturesList, burstDocList, maxTitleHeadline, minTitleHeadline, minN);
-	    	peakModel.explanationGenerationCosineLOG(bestFeaturesList, burstDocList, lang, maxTitleHeadline, minTitleHeadline, minN);
-//	    	peakModel.explanationGenerationCosineTF(bestFeaturesList, burstDocList, lang, maxTitleHeadline, minTitleHeadline, minN);
-
-			/**
-			 * Visualize Explanations
-			 */
-//			String method = "HITS";
-			String method = "COSINE";
-			peakModel.visualizeExplanations(burstDocList,topMHeadlines,method);
+			peakModel.explanationGenerationHITS(bestFeaturesList, burstDocList, maxTitleHeadline, minTitleHeadline, minN,topMHeadlines);
+	    	peakModel.explanationGenerationCosineLOG(bestFeaturesList, burstDocList, lang, maxTitleHeadline, minTitleHeadline, minN,topMHeadlines);
+	    	
+//	    	peakModel.explanationGenerationMMRCosine(lamdaMMR, bestFeaturesList, burstDocList, lang, maxTitleHeadline, minTitleHeadline, minN, topMHeadlines);
+	    	
+//	    	peakModel.explanationGenerationCosineTF(bestFeaturesList, burstDocList, lang, maxTitleHeadline, minTitleHeadline, minN,topMHeadlines);
 			
 			
 			
@@ -156,9 +154,71 @@ public class ExplanationGeneration extends FeatureSelection{
 	
 	
 	
-	
-	
-	
+	/**
+	 * MMR
+	 * @param l
+	 * @param bestFeaturesList
+	 * @param docSet
+	 * @param lang
+	 * @param maxTitleHeadline
+	 * @param minTitleHeadline
+	 * @param ngramLength
+	 * @param topMHeadlines
+	 */
+	public void explanationGenerationMMRCosine(double l, List<NGram> bestFeaturesList,Set<KbDocument> docSet, LanguageModel lang,int maxTitleHeadline,int minTitleHeadline, int ngramLength,int topMHeadlines){		
+		for(KbDocument doc : docSet){
+			List<String> titleTokens = Helper.getGivenLengthNgramsFromList(doc.getTokenSet(),ngramLength);
+			if(titleTokens.size() <= minTitleHeadline || titleTokens.size() >= maxTitleHeadline) continue;
+			double cosine  = cosineDocWithBestFeaturesLOG(doc, bestFeaturesList, lang);
+			doc.setCosineSimilarity(cosine);
+		}
+		
+		List<KbDocument> docList = new ArrayList<KbDocument>(docSet);
+		Collections.sort(docList,KbDocument.COMPARATOR_COSINE);
+		List<KbDocument> selectedDocs = new ArrayList<KbDocument>();
+		
+		List<Integer> selectedDocIndexes = new ArrayList<Integer>();
+		for(int i=0;i<docList.size();i++){
+			if(selectedDocs.isEmpty()){
+				selectedDocs.add(docList.get(i));
+				selectedDocIndexes.add(i);
+			}
+			else{
+				//calculate MMR for the next docs that got a cosine sim with the query
+				double maxMMR=-1000.0;
+				int indexOfMaxMMR=-1;
+				for(int y=i+1;i<docList.size();y++){
+					if(selectedDocIndexes.contains(y)) continue;
+					KbDocument docToCheck = docList.get(y);
+					if(docToCheck.getCosineSimilarity()==0) break;
+					double MMR = l*docToCheck.getCosineSimilarity() - ((1-l) * maxSimFromPreviousSelected(docToCheck,selectedDocs));
+					if(MMR>maxMMR){
+						maxMMR = MMR;
+						indexOfMaxMMR = y;
+					}
+				}
+				//add the maximum MMR to selected
+				if(indexOfMaxMMR==-1) break;
+				selectedDocs.add(docList.get(indexOfMaxMMR));
+				selectedDocIndexes.add(indexOfMaxMMR);
+				if(selectedDocs.size()== topMHeadlines) break;
+			}
+		}
+		//visualize
+		for(KbDocument d:selectedDocs)
+			System.out.println(d.getTitle());
+		
+	}
+
+	public double maxSimFromPreviousSelected(KbDocument docToCheck, List<KbDocument> selectedDocs){
+		double maxSim = -100.0;
+    	for(KbDocument d : selectedDocs){
+   			double cos=cosineDocWithDoc(docToCheck,d);
+   			if(cos>maxSim)
+   				maxSim = cos;
+    	}
+    	return maxSim;
+	}
 	
 	
 	
@@ -174,7 +234,7 @@ public class ExplanationGeneration extends FeatureSelection{
 	 * @param minTitleHeadline
 	 * @param ngramLength
 	 */
-	public void explanationGenerationCosineLOG(List<NGram> bestFeaturesList,Set<KbDocument> docList, LanguageModel lang,int maxTitleHeadline,int minTitleHeadline, int ngramLength){		
+	public void explanationGenerationCosineLOG(List<NGram> bestFeaturesList,Set<KbDocument> docList, LanguageModel lang,int maxTitleHeadline,int minTitleHeadline, int ngramLength,int topMHeadlines){		
 		for(KbDocument doc : docList){
 			List<String> titleTokens = Helper.getGivenLengthNgramsFromList(doc.getTokenSet(),ngramLength);
 			if(titleTokens.size() <= minTitleHeadline || titleTokens.size() >= maxTitleHeadline) continue;
@@ -182,9 +242,10 @@ public class ExplanationGeneration extends FeatureSelection{
 			double cosine  = cosineDocWithBestFeaturesLOG(doc, bestFeaturesList, lang);
 			doc.setCosineSimilarity(cosine);
 		}
+		visualizeExplanations(docList,topMHeadlines,"COSINE");
 	}
 
-	public void explanationGenerationCosineTF(List<NGram> bestFeaturesList,Set<KbDocument> docList, LanguageModel lang,int maxTitleHeadline,int minTitleHeadline, int ngramLength){		
+	public void explanationGenerationCosineTF(List<NGram> bestFeaturesList,Set<KbDocument> docList, LanguageModel lang,int maxTitleHeadline,int minTitleHeadline, int ngramLength,int topMHeadlines){		
 		for(KbDocument doc : docList){
 			List<String> titleTokens = Helper.getGivenLengthNgramsFromList(doc.getTokenSet(),ngramLength);
 			if(titleTokens.size() <= minTitleHeadline || titleTokens.size() >= maxTitleHeadline) continue;
@@ -192,6 +253,7 @@ public class ExplanationGeneration extends FeatureSelection{
 			double cosine  = cosineDocWithBestFeaturesTFbaseline(doc, bestFeaturesList, lang);
 			doc.setCosineSimilarity(cosine);
 		}
+		visualizeExplanations(docList,topMHeadlines,"COSINE");
 	}
 
 	/**
@@ -210,13 +272,16 @@ public class ExplanationGeneration extends FeatureSelection{
 		int index=0;
 		for(String feature : allFeaturesSet){
 			NGram ng = lang.getNgram(feature, "title");
-			if(bestFeaturesList.contains(ng)) vector1[index] = ng.getLOG_Likelyhood_burst(); else vector1[index] = 0.0;
-			if(titleTokens.contains(feature)) vector2[index] = ng.getLOG_Likelyhood_burst(); else vector2[index] = 0.0;
-//			if(bestFeaturesList.contains(ng)) vector1[index] = ng.getLOG_Likelyhood_corpus(); else vector1[index] = 0.0;
-//			if(titleTokens.contains(feature)) vector2[index] = ng.getLOG_Likelyhood_corpus(); else vector2[index] = 0.0;
-
-			index++;
+			if(ng!=null){
+				if(bestFeaturesList.contains(ng)) vector1[index] = ng.getLOG_Likelyhood_burst(); else vector1[index] = 0.0;
+				if(titleTokens.contains(feature)) vector2[index] = ng.getLOG_Likelyhood_burst(); else vector2[index] = 0.0;
+	//			if(bestFeaturesList.contains(ng)) vector1[index] = ng.getLOG_Likelyhood_corpus(); else vector1[index] = 0.0;
+	//			if(titleTokens.contains(feature)) vector2[index] = ng.getLOG_Likelyhood_corpus(); else vector2[index] = 0.0;
+				index++;
+			}
 		}
+		
+
 		//compute numerator
 		double num = 0.0;
 		for(int i=0;i<vector1.length;i++)
@@ -225,9 +290,40 @@ public class ExplanationGeneration extends FeatureSelection{
 		double nv1 = getNormVector(vector1);
 		double nv2 = getNormVector(vector2);
 		//cosine
+		if(nv2==0) return 0.0; //if there are no any hits in the documents then is zero..
 		return (double)num / (nv1*nv2);
 	}
+
 	
+	public double cosineDocWithDoc(KbDocument doc1,KbDocument doc2){
+		List<String> titleTokens1 = Helper.getGivenLengthNgramsFromList(doc1.getTokenSet(),1);
+		List<String> titleTokens2 = Helper.getGivenLengthNgramsFromList(doc2.getTokenSet(),1);
+		Set<String> allFeaturesSet = new HashSet<String>();allFeaturesSet.addAll(titleTokens1);allFeaturesSet.addAll(titleTokens2);
+
+		double[] vector1 = new double[allFeaturesSet.size()];
+		double[] vector2 = new double[allFeaturesSet.size()];
+		
+		//create vectors
+		int index=0;
+		for(String feature : allFeaturesSet){
+			if(titleTokens1.contains(feature)) vector1[index] = 1; else vector1[index] = 0.0;
+			if(titleTokens2.contains(feature)) vector2[index] = 1; else vector2[index] = 0.0;
+			index++;
+		}
+		
+
+		//compute numerator
+		double num = 0.0;
+		for(int i=0;i<vector1.length;i++)
+			num += vector1[i] * vector2[i];
+		//normalized vector
+		double nv1 = getNormVector(vector1);
+		double nv2 = getNormVector(vector2);
+		//cosine
+		if(nv1==0 || nv2==0) return 0.0;
+		return (double)num / (nv1*nv2);
+	}
+
 	/**
 	 * 
 	 * @param doc
@@ -270,7 +366,7 @@ public class ExplanationGeneration extends FeatureSelection{
 	 * @param minTitleHeadline
 	 * @param ngramLength
 	 */
-	public void explanationGenerationHITS(List<NGram> bestFeaturesList,Set<KbDocument> docList, int maxTitleHeadline,int minTitleHeadline, int ngramLength){		
+	public void explanationGenerationHITS(List<NGram> bestFeaturesList,Set<KbDocument> docList, int maxTitleHeadline,int minTitleHeadline, int ngramLength,int topMHeadlines){		
 		int countHits = 0;
 		for(KbDocument doc : docList){
 			countHits = 0;
@@ -284,6 +380,8 @@ public class ExplanationGeneration extends FeatureSelection{
 			}
 			doc.setHitCounts(countHits);
 		}
+		visualizeExplanations(docList,topMHeadlines,"HITS");
+
 	}
 
 	/**

@@ -189,11 +189,11 @@ public class FeatureSelection extends DocumentSelection{
 		/**
 		 * 3. Log compare Burst against non Burst
 		 */
-//		LanguageModel lang = burstLanguageModelList.get(burstLanguageModelList.indexOf(new LanguageModel(featureLevel)));
-//		LanguageModel m2 = noBurstLanguageModelList.get(noBurstLanguageModelList.indexOf(new LanguageModel(featureLevel)));
-////		LanguageModel m2 = allDocsLanguageModelList.get(allDocsLanguageModelList.indexOf(new LanguageModel(featureLevel)));
-//		measureSignificanceOfTermsInBurstAgainstNonBurstDocs(lang, m2);
-//		Collections.sort(lang.getNgramList(), NGram.COMPARATOR_LOG_LIKELIHOOD_BURST);
+		LanguageModel lang = burstLanguageModelList.get(burstLanguageModelList.indexOf(new LanguageModel(featureLevel)));
+		LanguageModel m2 = noBurstLanguageModelList.get(noBurstLanguageModelList.indexOf(new LanguageModel(featureLevel)));
+//		LanguageModel m2 = allDocsLanguageModelList.get(allDocsLanguageModelList.indexOf(new LanguageModel(featureLevel)));
+		measureSignificanceOfTermsInBurstAgainstNonBurstDocs(lang, m2);
+		Collections.sort(lang.getNgramList(), NGram.COMPARATOR_LOG_LIKELIHOOD_BURST);
 		
 		
 		
@@ -201,15 +201,15 @@ public class FeatureSelection extends DocumentSelection{
     	/**
     	 * 4. Back Off model - needs to assign which Lang Model to use with **featureLevel > 1**
     	 */
-		for(int ngramLength=1;ngramLength<=3;ngramLength++){
-			LanguageModel m1 = burstLanguageModelList.get(burstLanguageModelList.indexOf(new LanguageModel(ngramLength)));
-			LanguageModel m2 = noBurstLanguageModelList.get(noBurstLanguageModelList.indexOf(new LanguageModel(ngramLength)));
-//			LanguageModel m2 = allDocsLanguageModelList.get(allDocsLanguageModelList.indexOf(new LanguageModel(ngramLength)));
-			measureSignificanceOfTermsInBurstAgainstNonBurstDocs(m1, m2);
-		}
-		measureSignificanceBasedOnBackOffModel(burstLanguageModelList, 2, 2,1);
-		LanguageModel lang = burstLanguageModelList.get(burstLanguageModelList.indexOf(new LanguageModel(featureLevel)));
-    	Collections.sort(lang.getNgramList(), NGram.COMPARATOR_LOG_LIKELIHOOD_BURST);
+//		for(int ngramLength=1;ngramLength<=3;ngramLength++){
+//			LanguageModel m1 = burstLanguageModelList.get(burstLanguageModelList.indexOf(new LanguageModel(ngramLength)));
+//			LanguageModel m2 = noBurstLanguageModelList.get(noBurstLanguageModelList.indexOf(new LanguageModel(ngramLength)));
+////			LanguageModel m2 = allDocsLanguageModelList.get(allDocsLanguageModelList.indexOf(new LanguageModel(ngramLength)));
+//			measureSignificanceOfTermsInBurstAgainstNonBurstDocs(m1, m2);
+//		}
+//		measureSignificanceBasedOnBackOffModel(burstLanguageModelList, 2, 2,1);
+//		LanguageModel lang = burstLanguageModelList.get(burstLanguageModelList.indexOf(new LanguageModel(featureLevel)));
+//    	Collections.sort(lang.getNgramList(), NGram.COMPARATOR_LOG_LIKELIHOOD_BURST);
     	
 //		System.out.println("Total number of feature candidates:"+lang.getNgramList().size());
     	return lang;
