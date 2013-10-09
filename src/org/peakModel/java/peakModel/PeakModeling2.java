@@ -429,6 +429,22 @@ public class PeakModeling2 {
 	
 	
 	
+	/**
+	 * @return the n_query_peakPeriod
+	 */
+	public long getN_query_peakPeriod() {
+		return N_query_peakPeriod;
+	}
+
+
+
+
+
+
+
+
+
+
 	/*
 	 * Input Paramaters
 	 */
@@ -601,6 +617,25 @@ public class PeakModeling2 {
 
 
 	/**
+	 * @return the n_peak
+	 */
+	public long getN_peak() {
+		return N_peak;
+	}
+
+
+
+
+	/**
+	 * @return the n_corpus
+	 */
+	public long getN_corpus() {
+		return N_corpus;
+	}
+
+
+
+	/**
 	 * Close Lucene indexes
 	 * @throws IOException
 	 */
@@ -740,7 +775,7 @@ public class PeakModeling2 {
 		queryDocFreqPerDayMap = new HashMap<String,Integer>();
 		documentList = new LinkedHashSet<KbDocument>();
 		
-//	    System.out.println("Get the Top Docs time(no parsing):"+ (System.currentTimeMillis()-startTime));
+//	    System.out.println("\t\t\t##Get the Top Docs time(no parsing):"+ (System.currentTimeMillis()-startTime)+"\tdocs:"+hits.length);
         if(hits.length==0){
         	System.out.println("Zero Results :/");
         }else{
@@ -797,6 +832,7 @@ public class PeakModeling2 {
 //				}
 				
 			}
+//		    System.out.println("\t\t\t##Get the Top Docs time and parsing:"+ (System.currentTimeMillis()-startTime));
 			this.totalNumberOfRelevantDocuments = this.documentList.size();
 
         }

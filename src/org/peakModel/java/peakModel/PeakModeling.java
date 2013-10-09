@@ -503,19 +503,19 @@ public class PeakModeling {
 //    			ngram.computePhrasenessPKLBackgroundCorpus(unigramList);
 //    			ngram.computePhrasenessPMIBackgroundCorpus(unigramList);
     		}
-        	ngram.computePMIcorpus();
-        	ngram.computePMIpeak();
-        	ngram.computePMIpeakTimesTf_query_peak();
-        	ngram.computePMI_corpus_times_tf_query_peak();
+//        	ngram.computePMIcorpus();
+//        	ngram.computePMIpeak();
+//        	ngram.computePMIpeakTimesTf_query_peak();
+//        	ngram.computePMI_corpus_times_tf_query_peak();
         	ngram.computeLOGlikelyhoodPeak( N_query_peakPeriod, N_peak);
         	ngram.computeLOGlikelyhoodCorpus(N_query_peakPeriod, N_corpus);
-        	ngram.computePointwiseKLCorpus();
-        	ngram.computePointwiseKLPeak();
-        	ngram.computePointwiseKLCorpusPeak();
-        	ngram.computeDiceCorpus(N_query_peakPeriod);
-        	ngram.computeDicePeak(N_query_peakPeriod);
-        	ngram.computePhiSquareCorpus(N_query_peakPeriod, N_corpus);
-        	ngram.computePhiSquarePeak(N_query_peakPeriod, N_peak);
+//        	ngram.computePointwiseKLCorpus();
+//        	ngram.computePointwiseKLPeak();
+//        	ngram.computePointwiseKLCorpusPeak();
+//        	ngram.computeDiceCorpus(N_query_peakPeriod);
+//        	ngram.computeDicePeak(N_query_peakPeriod);
+//        	ngram.computePhiSquareCorpus(N_query_peakPeriod, N_corpus);
+//        	ngram.computePhiSquarePeak(N_query_peakPeriod, N_peak);
         	ngram.computeTF_IDF(N_years,maxTF_query_peak);
         	ngram.computeMY_APPROACH();
         }

@@ -21,14 +21,19 @@ public class Test {
 	 * @throws ParseException 
 	 */
 	public static void main(String[] args) throws IOException, ParseException {
-		List<String> stopList = new ArrayList<String>(Arrays.asList("een","en"));
+		long totCorpus=17889710492l;
+		int a = 8;
+		int b = 1690025;
+		long c = 1940 - a;
+		long d = totCorpus - b;
 		
-		String ngram="haagse";
-		List<String> queryList = new ArrayList<String>(Arrays.asList(ngram.toLowerCase().split("\\s")));queryList.add(ngram.toLowerCase());
+//		double LOG_Likelyhood_corpus = 2 * (a * Helper.log2(a) + b * Helper.log2(b) + c * Helper.log2(c) + d * Helper.log2(d) - (a + b) * Helper.log2(a + b) - (a + c) * Helper.log2(a + c) - (b + d) * Helper.log2(b + d) - (c + d) * Helper.log2(c + d)+ (a + b + c + d)* Helper.log2(a + b + c + d));
 
-		String ngTest="een";
-		System.out.println(includeStopWord(ngTest,stopList));
-		
+		double E1 = (double)1940 * (a+b) / (1940+totCorpus);
+		double E2 = (double)totCorpus * (a+b) / (1940+totCorpus);
+		double LOG_Likelyhood_corpus=(double) 2 * ((a * Math.log((a/E1))) + (b * Math.log((b/E2))));
+
+		System.out.println(LOG_Likelyhood_corpus);
 	}
 	
 	
