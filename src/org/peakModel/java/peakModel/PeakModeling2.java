@@ -67,7 +67,9 @@ public class PeakModeling2 {
 		
 		
 		
-		
+	    final boolean skipStopWords = true;
+	    final boolean skipFeaturesIncludeQuery = true;
+
 		
 		
 		
@@ -101,18 +103,19 @@ public class PeakModeling2 {
         /**
          * Create Language models for each class(Burst,NonBurst);Ngram Candidate lists form each document set with length 1 to 3
          */
+		List<String> queryList = new ArrayList<String>(Arrays.asList(query.toLowerCase().split("\\s")));queryList.add(query.toLowerCase());
         int minNGramLengthLM = 1;
         int maxNGramLengthLM = 4;
         //BURSTs DOCS:get all documents that are published on the burst period and extract Ngram Models
 		Set<KbDocument> burstDocList = peakModel.getBurstsDocumentsList(queryTemporalProfile);
-		List<LanguageModel> burstLanguageModelList = createLanguageModels(burstDocList, minNGramLengthLM, maxNGramLengthLM);
+		List<LanguageModel> burstLanguageModelList = createLanguageModels(burstDocList, minNGramLengthLM, maxNGramLengthLM,skipFeaturesIncludeQuery,  skipStopWords, queryList, peakModel.getStopWords());
 		
 		//NON BURSTS DOCS:get all documents that are NOT published on the burst period and extract Ngram Models
 		Set<KbDocument> nonBurstDocList = peakModel.getNonBurstsDocumentsList(queryTemporalProfile);
-		List<LanguageModel> noBurstLanguageModelList = createLanguageModels(nonBurstDocList, minNGramLengthLM, maxNGramLengthLM);
+		List<LanguageModel> noBurstLanguageModelList = createLanguageModels(nonBurstDocList, minNGramLengthLM, maxNGramLengthLM,skipFeaturesIncludeQuery,  skipStopWords, queryList, peakModel.getStopWords());
 				
 		//ALL DOCUMENTS
-		List<LanguageModel> allDocsLanguageModelList = createLanguageModels(peakModel.documentList, minNGramLengthLM, maxNGramLengthLM);
+		List<LanguageModel> allDocsLanguageModelList = createLanguageModels(peakModel.documentList, minNGramLengthLM, maxNGramLengthLM,skipFeaturesIncludeQuery,  skipStopWords, queryList, peakModel.getStopWords());
         System.out.println("#Total LanguageModels run time:"+ (System.currentTimeMillis()-startTime)/1000);
 		
 
@@ -370,15 +373,17 @@ public class PeakModeling2 {
 				p_w2 = ng2.getP_w_language_model();
 			}
 
-			double E1 = (double)totalNgramFreqM1 * (a+b) / totalNgramFreqBothModels;
-			double E2 = (double)totalNgramFreqM2 * (a+b) / totalNgramFreqBothModels;
+			double E1 = (double)(totalNgramFreqM1 * (a+b)) / totalNgramFreqBothModels;
+			double E2 = (double)(totalNgramFreqM2 * (a+b)) / totalNgramFreqBothModels;
 			//@see http://ucrel.lancs.ac.uk/llwizard.html
 			double secondParam = 0.0;
 			if(b!=0)
-				secondParam = (double)(b * Math.log((b/E2)));
-			double LOG_Likelyhood_burst = (double) 2 * ((a * Math.log((a/E1))) + secondParam);
+				secondParam = (double)(b * Math.log((double)b/E2));
+			double LOG_Likelyhood_burst = (double) 2 * ((a * Math.log((double)a/E1)) + secondParam);
 			if(p_w1<p_w2)
 				LOG_Likelyhood_burst *= -1;
+			
+
 
 			//other way to compute it..
 //			int c = totalNgramFreqM1 - a;
@@ -564,16 +569,16 @@ public class PeakModeling2 {
 	 * @return list of language model
 	 * @throws IOException
 	 */
-	public static List<LanguageModel> createLanguageModels(Set<KbDocument> documentList,int minNGramLength,int maxNGramLength) throws IOException{
+	public static List<LanguageModel> createLanguageModels(Set<KbDocument> documentList,int minNGramLength,int maxNGramLength,boolean skipFeaturesIncludeQuery, boolean skipStopWords,List<String> queryList,List<String> stopWords) throws IOException{
 		List<LanguageModel> languageModelList = new ArrayList<LanguageModel>();
 		for(int ngramLength=minNGramLength;ngramLength<=maxNGramLength;ngramLength++)
-			languageModelList.add(createLanguageModel(documentList, ngramLength));
+			languageModelList.add(createLanguageModel(documentList, ngramLength,skipFeaturesIncludeQuery,  skipStopWords, queryList, stopWords));
 		return languageModelList;
 	}
-	public static LanguageModel createLanguageModel(Set<KbDocument> documentList,int ngramLength) throws IOException{
+	public static LanguageModel createLanguageModel(Set<KbDocument> documentList,int ngramLength,boolean skipFeaturesIncludeQuery, boolean skipStopWords,List<String> queryList,List<String> stopWords) throws IOException{
 		List<NGram> ngramList = new ArrayList<NGram>();
 		for(KbDocument kb : documentList)
-			Helper.mapTokenListToNGramList(Helper.getGivenLengthNgramsFromList(kb.getTokenSet(),ngramLength), kb.getDate(), "title", ngramList);
+			Helper.mapTokenListToNGramList(Helper.getGivenLengthNgramsFromList(kb.getTokenSet(),ngramLength, skipFeaturesIncludeQuery,  skipStopWords, queryList, stopWords), kb.getDate(), "title", ngramList);
 		
 		LanguageModel languageModel = new LanguageModel(ngramLength,ngramList,documentList.size());
 		return languageModel;

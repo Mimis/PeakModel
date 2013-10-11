@@ -2,6 +2,7 @@ package org.peakModel.java.peakModel.tests;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -67,9 +68,14 @@ public class ExplanationGeneration extends FeatureSelection{
 	    final double lamdaMMR = 0.7;
 	    
 	    
+	    final boolean skipStopWords = true;
+	    final boolean skipFeaturesIncludeQuery = false;
+
 		
 		
-		
+	    
+	    
+	    
 		//========================================================== Main ==========================================================//	    	
 	    ExplanationGeneration peakModel = new ExplanationGeneration(useForSearchOnlyTitle, useStopWords, minN, maxN, NUMBER_THREADS, MAX_DOCS, MAX_TITLE_LENGTH, MIN_TITLE_LENGTH, burstTimeSpan);
 
@@ -91,16 +97,16 @@ public class ExplanationGeneration extends FeatureSelection{
 	        /**
 	         * Create Language models for each class(Burst,NonBurst);Ngram Candidate lists form each document set with length 1 to 3
 	         */
+			List<String> queryList = new ArrayList<String>(Arrays.asList(query.toLowerCase().split("\\s")));queryList.add(query.toLowerCase());
 			int minLang = 1;int maxLang = 2;
 	        //BURSTs DOCS:get all documents that are published on the burst period and extract Ngram Models
 			Set<KbDocument> burstDocList = peakModel.getBurstsDocumentsList(queryTemporalProfile);
-			List<LanguageModel> burstLanguageModelList = createLanguageModels(burstDocList, minLang, maxLang);//TODO CHANGE THAT
+			List<LanguageModel> burstLanguageModelList = createLanguageModels(burstDocList, minLang, maxLang,skipFeaturesIncludeQuery,  skipStopWords, queryList, peakModel.getStopWords());//TODO CHANGE THAT
 			//NON BURSTS DOCS:get all documents that are NOT published on the burst period and extract Ngram Models
 			Set<KbDocument> nonBurstDocList = peakModel.getNonBurstsDocumentsList(queryTemporalProfile);
-			List<LanguageModel> noBurstLanguageModelList = createLanguageModels(nonBurstDocList, minLang, maxLang);
+			List<LanguageModel> noBurstLanguageModelList = createLanguageModels(nonBurstDocList, minLang, maxLang,skipFeaturesIncludeQuery,  skipStopWords, queryList, peakModel.getStopWords());
 			//ALL DOCUMENTS
-			List<LanguageModel> allDocsLanguageModelList = createLanguageModels(peakModel.getDocumentList(), minLang, maxLang);
-			
+			List<LanguageModel> allDocsLanguageModelList = createLanguageModels(peakModel.getDocumentList(), minLang, maxLang,skipFeaturesIncludeQuery,  skipStopWords, queryList, peakModel.getStopWords());
 		   
 			
 	    	/**
@@ -112,9 +118,7 @@ public class ExplanationGeneration extends FeatureSelection{
 			/**
 	    	 * Get top features(do not include the query!!)
 	    	 */
-		    final boolean skipStopWordsDurringFeatureSelection = true;
-		    final boolean skipFeaturesIncludeQuery = false;
-	    	List<NGram> bestFeaturesList = getBestFeatures(lang.getNgramList(), topFeatures,entry.getKey(), skipStopWordsDurringFeatureSelection, skipFeaturesIncludeQuery,peakModel);
+	    	List<NGram> bestFeaturesList = getBestFeatures(lang.getNgramList(), topFeatures,entry.getKey());
 	    	
 	    	
 			/**
@@ -140,7 +144,7 @@ public class ExplanationGeneration extends FeatureSelection{
 	    	 * 	3.Cosine based on term frequencies for Baseline..
 	    	 */
 //			peakModel.explanationGenerationHITS(hybridBestFeaturesList2, peakModel.getDocumentList(), maxTitleHeadline, minTitleHeadline, minN,topMHeadlines);
-	    	peakModel.explanationGenerationCosineLOG(bestFeaturesList, burstDocList, lang, maxTitleHeadline, minTitleHeadline, minN,topMHeadlines);
+	    	peakModel.explanationGenerationCosineLOG(hybridBestFeaturesList2, peakModel.getDocumentList(), lang, maxTitleHeadline, minTitleHeadline, minN,topMHeadlines);
 //	    	peakModel.explanationGenerationMMRCosine(lamdaMMR, hybridBestFeaturesList2, peakModel.getDocumentList(), lang, maxTitleHeadline, minTitleHeadline, minN, topMHeadlines);
 	    	
 //	    	peakModel.explanationGenerationCosineTF(bestFeaturesList, burstDocList, lang, maxTitleHeadline, minTitleHeadline, minN,topMHeadlines);

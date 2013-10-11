@@ -513,15 +513,29 @@ public class Helper {
 		return tokenNoNgramNumbersList;
 	}
 
-	public static List<String> getGivenLengthNgramsFromList(Collection<String> tokenList,int ngramLength){
+	public static List<String> getGivenLengthNgramsFromList(Collection<String> tokenList,int ngramLength,boolean skipFeaturesIncludeQuery, boolean skipStopWords,List<String> queryList,List<String> stopWords){
 		List<String> tokenOnlyGivenLengthList = new ArrayList<String>();
 		for(String token:tokenList){
-			if(token.split(" ").length == ngramLength)
+			if(token.split(" ").length == ngramLength){
+	       		if(skipFeaturesIncludeQuery && Helper.includeQuery(token, queryList)) continue;
+	       		if(skipStopWords && Helper.includeStopWord(token, stopWords)) continue;
+
 				tokenOnlyGivenLengthList.add(token);
+			}
 		}
 		return tokenOnlyGivenLengthList;
 	}
-	
+
+	public static List<String> getGivenLengthNgramsFromList(Collection<String> tokenList,int ngramLength){
+		List<String> tokenOnlyGivenLengthList = new ArrayList<String>();
+		for(String token:tokenList){
+			if(token.split(" ").length == ngramLength){
+				tokenOnlyGivenLengthList.add(token);
+			}
+		}
+		return tokenOnlyGivenLengthList;
+	}
+
 	public static List<String> keepOnlyBigramsFromList(List<String> tokenList){
 		List<String> tokenOnlyBiList = new ArrayList<String>();
 		for(String token:tokenList){

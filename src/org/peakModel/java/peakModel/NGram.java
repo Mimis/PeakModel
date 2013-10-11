@@ -633,13 +633,13 @@ public class NGram {
 		int b = this.tf_corpus;
 		long c = N_query_peakPeriod - a;
 		long d = N_corpus - b;
-		this.LOG_Likelyhood_corpus = 2 * (a * Helper.log2(a) + b * Helper.log2(b) + c * Helper.log2(c) + d * Helper.log2(d) - (a + b) * Helper.log2(a + b) - (a + c) * Helper.log2(a + c) - (b + d) * Helper.log2(b + d) - (c + d) * Helper.log2(c + d)+ (a + b + c + d)* Helper.log2(a + b + c + d));
+		
+//		this.LOG_Likelyhood_corpus = 2 * (a * Helper.log2(a) + b * Helper.log2(b) + c * Helper.log2(c) + d * Helper.log2(d) - (a + b) * Helper.log2(a + b) - (a + c) * Helper.log2(a + c) - (b + d) * Helper.log2(b + d) - (c + d) * Helper.log2(c + d)+ (a + b + c + d)* Helper.log2(a + b + c + d));
 
 		//second version
-//		double E1 = (double)N_query_peakPeriod * (a+b) / (N_query_peakPeriod+N_corpus);
-//		double E2 = (double)N_corpus * (a+b) / (N_query_peakPeriod+N_corpus);
-//		this.LOG_Likelyhood_corpus=(double) 2 * ((a * Math.log((a/E1))) + (b * Math.log((b/E2))));
-
+		double E1 = (double)(N_query_peakPeriod * (a+b)) / (N_query_peakPeriod+N_corpus);
+		double E2 = (double)(N_corpus * (a+b)) / (N_query_peakPeriod+N_corpus);
+		this.LOG_Likelyhood_corpus=(double) 2 * ((a * Math.log((((double)a/E1)))) + (b * Math.log((((double)b/E2)))));
 	}
 	/**
 	 * Calculate LOG_Likelyhood_peak as below:
@@ -651,10 +651,19 @@ public class NGram {
 		int b = this.tf_peak;
 		long c = N_query_peakPeriod - a;
 		long d = N_peak - b;
-		this.LOG_Likelyhood_peak = 2 * (a * Helper.log2(a) + b * Helper.log2(b) + c * Helper.log2(c) + d * Helper.log2(d) - (a + b) * Helper.log2(a + b) - (a + c) * Helper.log2(a + c) - (b + d) * Helper.log2(b + d) - (c + d) * Helper.log2(c + d)+ (a + b + c + d)* Helper.log2(a + b + c + d));		
+//		this.LOG_Likelyhood_peak = 2 * (a * Helper.log2(a) + b * Helper.log2(b) + c * Helper.log2(c) + d * Helper.log2(d) - (a + b) * Helper.log2(a + b) - (a + c) * Helper.log2(a + c) - (b + d) * Helper.log2(b + d) - (c + d) * Helper.log2(c + d)+ (a + b + c + d)* Helper.log2(a + b + c + d));		
+		
+		//second version
+		double E1 = (double)(N_query_peakPeriod * (a+b)) / (N_query_peakPeriod+N_peak);
+		double E2 = (double)(N_peak * (a+b)) / (N_query_peakPeriod+N_peak);
+		this.LOG_Likelyhood_corpus=(double) 2 * ((a * Math.log((((double)a/E1)))) + (b * Math.log((((double)b/E2)))));
+
 	}
 
 
+
+	
+	
 	/**
 	 * Calculate LOG_Likelyhood_peak as below:
 	 * 	LOG_Likelyhood_classic(w|query,peak) => G2 = 2 P(w|N_query_peakPeriod) * ln (P(w|N_query_peakPeriod) / P(w|N_peak))

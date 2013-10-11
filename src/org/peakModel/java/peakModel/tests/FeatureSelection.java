@@ -58,11 +58,19 @@ public class FeatureSelection extends DocumentSelection{
 		final int MAX_DOCS = 400;
 		final boolean scoreDocs=true;
 		final boolean useDocFreqForBurstDetection=true;
-		final int topFeatures = 100;//how many documents should we consider? TOTAL number of DOcs / N = number of docs to consider
-	    
-	    
-		final double similarityProportionThreshold = 0.25;//if the common peak days is higher than this threshold then the feature is relevant
+		final int topFeatures = 25;//how many documents should we consider? TOTAL number of DOcs / N = number of docs to consider
+	    final double similarityProportionThreshold = 0.25;//if the common peak days is higher than this threshold then the feature is relevant
 
+	    final boolean skipStopWords = true;
+	    final boolean skipFeaturesIncludeQuery = true;
+
+	    
+	    
+	    
+	    
+	    
+	    
+	    
 	    
 	    
 	    
@@ -77,6 +85,10 @@ public class FeatureSelection extends DocumentSelection{
 	        String query = entry.getKey();
 			System.out.println("\n##############\n"+query+"\t"+date);
 	
+			
+			/**
+			 * Execute query
+			 */
 			peakModel.getPerYearStats(entry.getValue());
 			FeatureTemporalProfile queryTemporalProfile = peakModel.runQuery(entry.getKey(),entry.getValue(),peakModel, x,scoreDocs,useDocFreqForBurstDetection);
 			
@@ -87,15 +99,16 @@ public class FeatureSelection extends DocumentSelection{
 	        /**
 	         * Create Language models for each class(Burst,NonBurst);Ngram Candidate lists form each document set with length 1 to 3
 	         */
+			List<String> queryList = new ArrayList<String>(Arrays.asList(query.toLowerCase().split("\\s")));queryList.add(query.toLowerCase());
 			int minLang = 1;int maxLang = 2;
 	        //BURSTs DOCS:get all documents that are published on the burst period and extract Ngram Models
 			Set<KbDocument> burstDocList = peakModel.getBurstsDocumentsList(queryTemporalProfile);
-			List<LanguageModel> burstLanguageModelList = createLanguageModels(burstDocList, minLang, maxLang);//TODO CHANGE THAT
+			List<LanguageModel> burstLanguageModelList = createLanguageModels(burstDocList, minLang, maxLang,skipFeaturesIncludeQuery,  skipStopWords, queryList, peakModel.getStopWords());//TODO CHANGE THAT
 			//NON BURSTS DOCS:get all documents that are NOT published on the burst period and extract Ngram Models
 			Set<KbDocument> nonBurstDocList = peakModel.getNonBurstsDocumentsList(queryTemporalProfile);
-			List<LanguageModel> noBurstLanguageModelList = createLanguageModels(nonBurstDocList, minLang, maxLang);
+			List<LanguageModel> noBurstLanguageModelList = createLanguageModels(nonBurstDocList, minLang, maxLang,skipFeaturesIncludeQuery,  skipStopWords, queryList, peakModel.getStopWords());
 			//ALL DOCUMENTS
-			List<LanguageModel> allDocsLanguageModelList = createLanguageModels(peakModel.getDocumentList(), minLang, maxLang);
+			List<LanguageModel> allDocsLanguageModelList = createLanguageModels(peakModel.getDocumentList(), minLang, maxLang,skipFeaturesIncludeQuery,  skipStopWords, queryList, peakModel.getStopWords());
 			
 
 
@@ -104,31 +117,29 @@ public class FeatureSelection extends DocumentSelection{
 	    	 * Feature Scoring..
 	    	 */
 			LanguageModel lang = peakModel.featureSelection(date, minN, allDocsLanguageModelList, burstLanguageModelList, noBurstLanguageModelList);
-	    	
-			
 	    	/**
 	    	 * Get top features(do not include the query!!)
 	    	 */
-		    final boolean skipStopWordsDurringFeatureSelection = true;
-		    final boolean skipFeaturesIncludeQuery = false;
-	    	List<NGram> bestFeaturesList = getBestFeatures(lang.getNgramList(), topFeatures,entry.getKey(), skipStopWordsDurringFeatureSelection,skipFeaturesIncludeQuery, peakModel);
+	    	List<NGram> bestFeaturesList = getBestFeatures(lang.getNgramList(), topFeatures,entry.getKey());
 			
-
+			//display
 //	    	for(NGram ng:bestFeaturesList)
-//				System.out.println(ng.getNgram()+"("+Helper.round(ng.getLOG_Likelyhood_burst(),2)+")");
+//				System.out.println(ng.getNgram()+"("+Helper.round(ng.getLOG_Likelyhood_corpus(),2)+")"+"\t"+ng.getTf_query_peak()+","+ng.getTf_peak()+","+ng.getTf_corpus());
 
 	    	
 	    	//testtt
-//	    	List<NGram> hybridBestFeaturesList2 = new ArrayList<NGram>();
-//	    	System.out.println("\n\n########final:");
-//	    	peakModel.getNgramPerYearSTats(bestFeaturesList,25,date);
-//	    	Collections.sort(bestFeaturesList, NGram.COMPARATOR_LOG_CORPUS);
-//	    	int c=1;
-//			for(NGram ng:bestFeaturesList){
-//				System.out.println(ng.getNgram()+"\tburst:"+ng.getLOG_Likelyhood_burst()+"\tcorpus:"+ng.getLOG_Likelyhood_corpus());
-//				hybridBestFeaturesList2.add(ng);
-//				if(c++ >25) break;
-//			}
+	    	List<NGram> hybridBestFeaturesList2 = new ArrayList<NGram>();
+	    	System.out.println("\n\n########final:");
+	    	peakModel.getNgramPerYearSTats(bestFeaturesList,25,date);
+	    	Collections.sort(bestFeaturesList, NGram.COMPARATOR_LOG_CORPUS);
+	    	System.out.println(peakModel.getN_query_peakPeriod()+"\t"+peakModel.getN_corpus());
+
+	    	int c=1;
+			for(NGram ng:bestFeaturesList){
+				System.out.println(ng.getNgram()+"\tburst:"+ng.getLOG_Likelyhood_burst()+"\tcorpus:"+ng.getLOG_Likelyhood_corpus()+"\t"+ng.getTf_query_peak()+","+ng.getTf_corpus());
+				hybridBestFeaturesList2.add(ng);
+				if(c++ >25) break;
+			}
 
 	    	
 	    	
@@ -136,7 +147,7 @@ public class FeatureSelection extends DocumentSelection{
 	    	 * #EVALUATION...
 	    	 * Check Burstiness overlaping between Query and Features
 	    	 */
-	    	peakModel.evaluateBestFeatures(query.toLowerCase(),queryTemporalProfile.getAllBurstDatesSet(),bestFeaturesList, date, x, scoreDocs, useDocFreqForBurstDetection,similarityProportionThreshold);
+//	    	peakModel.evaluateBestFeatures(query.toLowerCase(),queryTemporalProfile.getAllBurstDatesSet(),bestFeaturesList, date, x, scoreDocs, useDocFreqForBurstDetection,similarityProportionThreshold);
 			
 	    	
 	    		    	
@@ -183,7 +194,7 @@ public class FeatureSelection extends DocumentSelection{
 //		LanguageModel lang = burstLanguageModelList.get(burstLanguageModelList.indexOf(new LanguageModel(featureLevel)));
 //		getNgramPerYearSTats(lang.getNgramList(),25,date);
 //    	Collections.sort(lang.getNgramList(), NGram.COMPARATOR_LOG_CORPUS);
-////    	Collections.sort(lang.getNgramList(), NGram.COMPARATOR_LOG_PEAK);
+//    	Collections.sort(lang.getNgramList(), NGram.COMPARATOR_LOG_PEAK);
 
 		
 		
@@ -314,13 +325,10 @@ public class FeatureSelection extends DocumentSelection{
 	 * @param topN
 	 * @param query
 	 */
-	public static List<NGram> getBestFeatures(List<NGram> NGramList,int topN,String query,boolean skipStopWords,boolean skipFeaturesIncludeQuery, PeakModeling2 peakModel){
+	public static List<NGram> getBestFeatures(List<NGram> NGramList,int topN,String query){
 		List<NGram> bestFeatureList = new ArrayList<NGram>();
-		List<String> queryList = new ArrayList<String>(Arrays.asList(query.toLowerCase().split("\\s")));queryList.add(query.toLowerCase());
     	int c=1;
        	for(NGram ng:NGramList){
-       		if(skipFeaturesIncludeQuery && Helper.includeQuery(ng.getNgram(), queryList)) continue;
-       		if(skipStopWords && Helper.includeStopWord(ng.getNgram(), peakModel.getStopWords())) continue;
 //       		System.out.println(ng.getNgram()+"\t"+ng.getTf_query_peak());
        		bestFeatureList.add(ng);
        		if(c++ >= topN)	break;
@@ -363,11 +371,11 @@ public class FeatureSelection extends DocumentSelection{
 
 	public static Map<String,String> getQueryList(){
 		Map<String,String> queryToDateMap = new HashMap<String,String>();
-		queryToDateMap.put("lockheed", "1976");
-		queryToDateMap.put("NSB", "1979");
-		queryToDateMap.put("Haagse Post", "1974");
-		queryToDateMap.put("Recessie", "1975");
-		queryToDateMap.put("Krakers", "1981");
+//		queryToDateMap.put("lockheed", "1976");
+//		queryToDateMap.put("NSB", "1979");
+//		queryToDateMap.put("Haagse Post", "1974");
+//		queryToDateMap.put("Recessie", "1975");
+//		queryToDateMap.put("Krakers", "1981");
 		queryToDateMap.put("Beatrix", "1965");
 		
 //		queryToDateMap.put("griekenland", "1967");
