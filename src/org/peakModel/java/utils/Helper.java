@@ -26,6 +26,8 @@ import org.peakModel.java.peakModel.document_process.KbDocument;
 
 public class Helper {
 	
+	
+	
 	public static double round(double value, int places) {
 	    if (places < 0) throw new IllegalArgumentException();
 
@@ -320,7 +322,8 @@ public class Helper {
 	public static long removeNgramsWithNoOccurenceInNGramIndex(List<NGram> ngramList,List<NGram> finalNGramList){
 		long N_query_peakPeriod=0;
         for(NGram ngram:ngramList){
-        	if(ngram.getTf_corpus() != 0 && ngram.getTf_peak() != 0){
+        	//if appear in corpus index include it...
+        	if(ngram.getTf_corpus() != 0){
         		finalNGramList.add(ngram);
             	N_query_peakPeriod += ngram.getTf_query_peak();
         	}
@@ -513,12 +516,15 @@ public class Helper {
 		return tokenNoNgramNumbersList;
 	}
 
-	public static List<String> getGivenLengthNgramsFromList(Collection<String> tokenList,int ngramLength,boolean skipFeaturesIncludeQuery, boolean skipStopWords,List<String> queryList,List<String> stopWords){
+	public static List<String> getGivenLengthNgramsFromList(Collection<String> tokenList,int ngramLength,boolean skipFeaturesIncludeQuery, boolean skipStopWords,boolean skipFeaturesNumbers,List<String> queryList,List<String> stopWords,String query){
 		List<String> tokenOnlyGivenLengthList = new ArrayList<String>();
 		for(String token:tokenList){
 			if(token.split(" ").length == ngramLength){
+				if(token.equals(query))continue;
 	       		if(skipFeaturesIncludeQuery && Helper.includeQuery(token, queryList)) continue;
 	       		if(skipStopWords && Helper.includeStopWord(token, stopWords)) continue;
+	       		if(skipFeaturesNumbers && token.matches("(\\d\\s{0,1})+")) continue;//token.matches("(\\w+\\s\\d+|\\d+\\s\\w+|\\d+\\s\\d+|\\d+)")) continue;
+				
 
 				tokenOnlyGivenLengthList.add(token);
 			}

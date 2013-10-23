@@ -45,6 +45,7 @@ public class NGram {
 	private double PMI_peak;
 	private double PMI_peak_times_tf_query_peak;
 	private double PMI_corpus_times_tf_query_peak;
+	private double LOG_Likelyhood_extended;  //avg between log corpus ad log burst
 	private double LOG_Likelyhood_corpus;
 	private double LOG_Likelyhood_peak;
 	private double PointwiseKL_corpus;
@@ -66,6 +67,26 @@ public class NGram {
 		this.docFreqPerDayMap = new HashMap<String,Integer>();
 	}
 	
+
+
+
+	/**
+	 * @return the lOG_Likelyhood_extended
+	 */
+	public double getLOG_Likelyhood_extended() {
+		return LOG_Likelyhood_extended;
+	}
+
+
+
+
+	/**
+	 * @param lOG_Likelyhood_extended the lOG_Likelyhood_extended to set
+	 */
+	public void setLOG_Likelyhood_extended(double lOG_Likelyhood_extended) {
+		LOG_Likelyhood_extended = lOG_Likelyhood_extended;
+	}
+
 
 
 
@@ -629,17 +650,28 @@ public class NGram {
 	 * G2 = 2(a log(a) + b log(b) + c log(c) + d log(d)− (a + b)log(a + b) – (a + c)log(a + c)− (b + d)log(b + d) – (c + d)log(c + d)+ (a + b + c + d)log(a + b + c + d))
 	 */
 	public void computeLOGlikelyhoodCorpus(long N_query_peakPeriod,long N_corpus) {
-		int a = this.tf_query_peak;
-		int b = this.tf_corpus;
-		long c = N_query_peakPeriod - a;
-		long d = N_corpus - b;
-		
-//		this.LOG_Likelyhood_corpus = 2 * (a * Helper.log2(a) + b * Helper.log2(b) + c * Helper.log2(c) + d * Helper.log2(d) - (a + b) * Helper.log2(a + b) - (a + c) * Helper.log2(a + c) - (b + d) * Helper.log2(b + d) - (c + d) * Helper.log2(c + d)+ (a + b + c + d)* Helper.log2(a + b + c + d));
+		if(this.tf_corpus==0) this.LOG_Likelyhood_corpus=0.0;
+		else{
+			int a = this.tf_query_peak;
+			int b = this.tf_corpus;
+			long c = N_query_peakPeriod - a;
+			long d = N_corpus - b;
+	
+	//		this.LOG_Likelyhood_corpus = 2 * (a * Helper.log2(a) + b * Helper.log2(b) + c * Helper.log2(c) + d * Helper.log2(d) - (a + b) * Helper.log2(a + b) - (a + c) * Helper.log2(a + c) - (b + d) * Helper.log2(b + d) - (c + d) * Helper.log2(c + d)+ (a + b + c + d)* Helper.log2(a + b + c + d));
+	
+			//second version
+			double E1 = (double)(N_query_peakPeriod * (a+b)) / (N_query_peakPeriod+N_corpus);
+			double E2 = (double)(N_corpus * (a+b)) / (N_query_peakPeriod+N_corpus);
+			this.LOG_Likelyhood_corpus=(double) 2 * ((a * Math.log((((double)a/E1)))) + (b * Math.log((((double)b/E2)))));
+	
+			double p_w1 = getP_w_language_model();
+			double p_w2 = (double)tf_corpus/N_corpus ;
+			if(p_w1<p_w2)
+				LOG_Likelyhood_burst *= -1;
+			
+			//System.out.println(ngram+"\tm1.p_w1:"+p_w1+"\tm2.p_w2:"+p_w2+"\tm1.tf:"+a+"\tm2.tf:"+b+"\tm1.total:"+N_query_peakPeriod+"\tm2.total:"+N_corpus+"\tLOG:"+LOG_Likelyhood_corpus);
 
-		//second version
-		double E1 = (double)(N_query_peakPeriod * (a+b)) / (N_query_peakPeriod+N_corpus);
-		double E2 = (double)(N_corpus * (a+b)) / (N_query_peakPeriod+N_corpus);
-		this.LOG_Likelyhood_corpus=(double) 2 * ((a * Math.log((((double)a/E1)))) + (b * Math.log((((double)b/E2)))));
+		}
 	}
 	/**
 	 * Calculate LOG_Likelyhood_peak as below:
@@ -647,17 +679,25 @@ public class NGram {
 	 * G2 = 2(a log(a) + b log(b) + c log(c) + d log(d)− (a + b)log(a + b) – (a + c)log(a + c)− (b + d)log(b + d) – (c + d)log(c + d)+ (a + b + c + d)log(a + b + c + d))
 	 */
 	public void computeLOGlikelyhoodPeak(long N_query_peakPeriod,long N_peak) {
-		int a = this.tf_query_peak;
-		int b = this.tf_peak;
-		long c = N_query_peakPeriod - a;
-		long d = N_peak - b;
-//		this.LOG_Likelyhood_peak = 2 * (a * Helper.log2(a) + b * Helper.log2(b) + c * Helper.log2(c) + d * Helper.log2(d) - (a + b) * Helper.log2(a + b) - (a + c) * Helper.log2(a + c) - (b + d) * Helper.log2(b + d) - (c + d) * Helper.log2(c + d)+ (a + b + c + d)* Helper.log2(a + b + c + d));		
-		
-		//second version
-		double E1 = (double)(N_query_peakPeriod * (a+b)) / (N_query_peakPeriod+N_peak);
-		double E2 = (double)(N_peak * (a+b)) / (N_query_peakPeriod+N_peak);
-		this.LOG_Likelyhood_corpus=(double) 2 * ((a * Math.log((((double)a/E1)))) + (b * Math.log((((double)b/E2)))));
-
+		if(this.tf_peak==0) this.LOG_Likelyhood_corpus=0.0;
+		else{
+	
+			int a = this.tf_query_peak;
+			int b = this.tf_peak;
+			long c = N_query_peakPeriod - a;
+			long d = N_peak - b;
+	//		this.LOG_Likelyhood_peak = 2 * (a * Helper.log2(a) + b * Helper.log2(b) + c * Helper.log2(c) + d * Helper.log2(d) - (a + b) * Helper.log2(a + b) - (a + c) * Helper.log2(a + c) - (b + d) * Helper.log2(b + d) - (c + d) * Helper.log2(c + d)+ (a + b + c + d)* Helper.log2(a + b + c + d));		
+	
+			//second version
+			double E1 = (double)(N_query_peakPeriod * (a+b)) / (N_query_peakPeriod+N_peak);
+			double E2 = (double)(N_peak * (a+b)) / (N_query_peakPeriod+N_peak);
+			this.LOG_Likelyhood_peak=(double) 2 * ((a * Math.log((((double)a/E1)))) + (b * Math.log((((double)b/E2)))));
+	
+			double p_w1 = getP_w_language_model();
+			double p_w2 = (double)tf_peak/N_peak ;
+			if(p_w1<p_w2)
+				LOG_Likelyhood_burst *= -1;
+		}
 	}
 
 
@@ -1170,7 +1210,22 @@ public class NGram {
              	return 0;
          }
     };
-    
+
+    /**
+     * SORT BY LOG extended
+     */
+    public static Comparator<NGram> COMPARATOR_LOG_EXTENDED = new Comparator<NGram>()
+    {
+    	 public int compare(NGram o1, NGram o2){
+             if(o2.LOG_Likelyhood_extended > o1.LOG_Likelyhood_extended )
+             	return 1;
+             else if(o2.LOG_Likelyhood_extended < o1.LOG_Likelyhood_extended )
+             	return 0;
+             else 
+             	return 0;
+         }
+    };
+
     /**
      * SORT BY LOG PEAK
      */

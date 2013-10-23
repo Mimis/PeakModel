@@ -59,7 +59,7 @@ public class PeakModelWithDocumentSimilarity {
 		}
        	Collections.sort(documentList, KbDocument.COMPARATOR_COSINE);
 	}
-	private static int getNumeratorOfCosineSim(List<NGram> peakModelNGramList,Set<String> docTokenSet){
+	private static int getNumeratorOfCosineSim(List<NGram> peakModelNGramList,List<String> docTokenSet){
 		int numerator = 0;
 		for(NGram ng : peakModelNGramList){
 			if(docTokenSet.contains(ng.getNgram())){
@@ -96,16 +96,16 @@ public class PeakModelWithDocumentSimilarity {
 		int nrOfDocs = documentList.size();
 		double[][] distances = new double[nrOfDocs][nrOfDocs];
 		for(int i=0;i<nrOfDocs;i++){
-			Set<String> doc1 = documentList.get(i).getTokenSet();
+			List<String> doc1 = documentList.get(i).getTokenSet();
 			for(int y=0;y<nrOfDocs;y++){
-				Set<String> doc2 = documentList.get(y).getTokenSet();
+				List<String> doc2 = documentList.get(y).getTokenSet();
 				double cosine = cosine(doc1, doc2, languageModelList,stopWordsList);
 				distances[i][y] = cosine;
 			}
 		}
 		return distances;
 	}
-	private static double cosine(Set<String> doc1,Set<String> doc2,LanguageModel languageModelList,List<String> stopWordsList){
+	private static double cosine(List<String> doc1,List<String> doc2,LanguageModel languageModelList,List<String> stopWordsList){
 		//Compute vectors...
 		Set<String> all = new HashSet<String>();all.addAll(doc1);all.addAll(doc2);
 		List<Double> v1 = new ArrayList<Double>();

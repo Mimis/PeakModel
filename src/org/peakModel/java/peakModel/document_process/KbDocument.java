@@ -16,7 +16,7 @@ public class KbDocument {
 	private final int rank;
 	
 	private final double score;
-	private final Set<String> tokenSet; //set because we wanna only unique tokens;we count document frequency only
+	private final List<String> tokenSet; //set because we wanna only unique tokens;we count document frequency only
 	private double cosineSimilarity;
 	private Set<NGram> ngramHitsList;
 	private Set<NGram> ngramBurstyList;
@@ -35,7 +35,7 @@ public class KbDocument {
 		this.id = id;
 		this.date = date;
 		this.url = url;
-		this.tokenSet = new HashSet<String>(tokenList);
+		this.tokenSet = tokenList;
 		this.cosineSimilarity = 0.0;
 		this.hitCounts = 0;
 		this.score = score;
@@ -72,7 +72,7 @@ public class KbDocument {
 	/**
 	 * @return the tokenSet
 	 */
-	public Set<String> getTokenSet() {
+	public List<String> getTokenSet() {
 		return tokenSet;
 	}
 
@@ -156,6 +156,18 @@ public class KbDocument {
         }
     };
 
+	public static Comparator<KbDocument> COMPARATOR_DATE = new Comparator<KbDocument>()
+    {
+        public int compare(KbDocument o1, KbDocument o2){
+            if(o2.getDate().compareTo(o1.getDate()) > 0.0 )
+            	return 1;
+            else if(o2.getDate().compareTo(o1.getDate()) < 0.0 )
+            	return 0;
+            else 
+            	return 0;
+        }
+    };
+
 	public static Comparator<KbDocument> COMPARATOR_HITS = new Comparator<KbDocument>()
     {
         public int compare(KbDocument o1, KbDocument o2){
@@ -203,8 +215,4 @@ public class KbDocument {
 			return false;
 		return true;
 	}
-
-
-
-
 }

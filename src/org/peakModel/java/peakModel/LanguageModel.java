@@ -28,9 +28,11 @@ public class LanguageModel {
 			this.totalNGramFrequency += ng.getTf_query_peak();
 			if(maxNGramFrequency<ng.getTf_query_peak())
 				maxNGramFrequency=ng.getTf_query_peak();
-			//calculate the probability to find this ngram if we select by random an item from the document set that we extract it
-			ng.setP_w_language_model((double)ng.getTf_query_peak() / this.totalNumberOfDocuments);
 		}
+		for(NGram ng : ngramList)
+			//calculate the probability to find this ngram if we select by random an item from the document set that we extract it
+			ng.setP_w_language_model((double)ng.getTf_query_peak() / this.totalNGramFrequency);
+
 	}
 
 	/**

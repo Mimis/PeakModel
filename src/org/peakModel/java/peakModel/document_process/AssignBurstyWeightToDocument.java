@@ -8,7 +8,7 @@ import org.peakModel.java.peakModel.NGram;
 public class AssignBurstyWeightToDocument {
 
 	public static void AssignBurstyWeight(List<NGram> ngramList,KbDocument document){
-		Set<String> tokenSet = document.getTokenSet();
+		List<String> tokenSet = document.getTokenSet();
 		for(String token:tokenSet){
 			String currentToken = token;
 			NGram newNGram = new NGram(currentToken,"title");

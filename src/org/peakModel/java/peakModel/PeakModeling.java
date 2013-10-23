@@ -655,7 +655,7 @@ public class PeakModeling {
 		List<KbDocument> documentWithHitsList = new ArrayList<KbDocument>();
 		List<NGram> peakModelNGramList = ngramList.subList(0, ngramList.size() > topNgramsForConsideration ? topNgramsForConsideration : ngramList.size());
 		for(KbDocument kbDoc : documentList){
-			Set<String> docNgramMap = kbDoc.getTokenSet();
+			List<String> docNgramMap = kbDoc.getTokenSet();
 			Set<NGram> docNgramHitsList = new HashSet<NGram>();
 			for(NGram ngram:peakModelNGramList){
 				if(docNgramMap.contains(ngram.getNgram()))

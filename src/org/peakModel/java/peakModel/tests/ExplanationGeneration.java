@@ -53,11 +53,13 @@ public class ExplanationGeneration extends FeatureSelection{
 		final boolean useForSearchOnlyTitle = false;
 		final int burstTimeSpan = 7;
 	    final double x = 2.0;
-		final int MAX_DOCS = 400;
+		final int MAX_DOCS = 175;
 		final boolean scoreDocs=true;
 		final boolean useDocFreqForBurstDetection=true;
-		final int topFeatures = 100;//how many documents should we consider? TOTAL number of DOcs / N = number of docs to consider
-	    
+		final int topFeatures = 10;//how many documents should we consider? TOTAL number of DOcs / N = number of docs to consider
+	    // how many final document to get from preaks for further processing
+	    final int N = 30;		
+
 	    
 		/*
 		 * Specific for Explanation Generation parameters..
@@ -67,9 +69,10 @@ public class ExplanationGeneration extends FeatureSelection{
 		final int topMHeadlines = 5;
 	    final double lamdaMMR = 0.7;
 	    
-	    
+
 	    final boolean skipStopWords = true;
 	    final boolean skipFeaturesIncludeQuery = false;
+	    final boolean skipFeaturesNumbers = true;
 
 		
 		
@@ -100,19 +103,21 @@ public class ExplanationGeneration extends FeatureSelection{
 			List<String> queryList = new ArrayList<String>(Arrays.asList(query.toLowerCase().split("\\s")));queryList.add(query.toLowerCase());
 			int minLang = 1;int maxLang = 2;
 	        //BURSTs DOCS:get all documents that are published on the burst period and extract Ngram Models
-			Set<KbDocument> burstDocList = peakModel.getBurstsDocumentsList(queryTemporalProfile);
-			List<LanguageModel> burstLanguageModelList = createLanguageModels(burstDocList, minLang, maxLang,skipFeaturesIncludeQuery,  skipStopWords, queryList, peakModel.getStopWords());//TODO CHANGE THAT
+			Set<KbDocument> burstDocList = peakModel.getBurstsDocumentsList(queryTemporalProfile,N);
+			List<LanguageModel> burstLanguageModelList = createLanguageModels(burstDocList, minLang, maxLang,skipFeaturesIncludeQuery,  skipStopWords, skipFeaturesNumbers,queryList, peakModel.getStopWords(),query.toLowerCase());//TODO CHANGE THAT
 			//NON BURSTS DOCS:get all documents that are NOT published on the burst period and extract Ngram Models
 			Set<KbDocument> nonBurstDocList = peakModel.getNonBurstsDocumentsList(queryTemporalProfile);
-			List<LanguageModel> noBurstLanguageModelList = createLanguageModels(nonBurstDocList, minLang, maxLang,skipFeaturesIncludeQuery,  skipStopWords, queryList, peakModel.getStopWords());
+			List<LanguageModel> noBurstLanguageModelList = createLanguageModels(nonBurstDocList, minLang, maxLang,skipFeaturesIncludeQuery,  skipStopWords,skipFeaturesNumbers, queryList, peakModel.getStopWords(),query.toLowerCase());
 			//ALL DOCUMENTS
-			List<LanguageModel> allDocsLanguageModelList = createLanguageModels(peakModel.getDocumentList(), minLang, maxLang,skipFeaturesIncludeQuery,  skipStopWords, queryList, peakModel.getStopWords());
-		   
+			List<LanguageModel> allDocsLanguageModelList = createLanguageModels(peakModel.getDocumentList(), minLang, maxLang,skipFeaturesIncludeQuery,  skipStopWords, skipFeaturesNumbers,queryList, peakModel.getStopWords(),query.toLowerCase());
+			//Top N documents
+			List<LanguageModel> pseudoRelevanceDocsLanguageModelList = createLanguageModels(peakModel.getTopNDocumentList(N), minLang, maxLang,skipFeaturesIncludeQuery,  skipStopWords, skipFeaturesNumbers,queryList, peakModel.getStopWords(),query.toLowerCase());
+
 			
 	    	/**
 	    	 * Feature Scoring..Attention: Choose manualy the method!!!
 	    	 */
-			LanguageModel lang = peakModel.featureSelection(date, minN, allDocsLanguageModelList, burstLanguageModelList, noBurstLanguageModelList);
+			LanguageModel lang = peakModel.featureSelection(date, minN, allDocsLanguageModelList,pseudoRelevanceDocsLanguageModelList, burstLanguageModelList, noBurstLanguageModelList);
 	    	
 			
 			/**
@@ -124,14 +129,14 @@ public class ExplanationGeneration extends FeatureSelection{
 			/**
 			 * Hybrid
 			 */
-	    	List<NGram> hybridBestFeaturesList2 = new ArrayList<NGram>();
-	    	peakModel.getNgramPerYearSTats(bestFeaturesList,25,date);
-	    	Collections.sort(bestFeaturesList, NGram.COMPARATOR_LOG_CORPUS);
-	    	int c=1;
-			for(NGram ng:bestFeaturesList){
-				hybridBestFeaturesList2.add(ng);
-				if(c++ >25) break;
-			}
+//	    	List<NGram> hybridBestFeaturesList2 = new ArrayList<NGram>();
+//	    	peakModel.getNgramPerYearSTats(bestFeaturesList,25,date);
+//	    	Collections.sort(bestFeaturesList, NGram.COMPARATOR_LOG_CORPUS);
+//	    	int c=1;
+//			for(NGram ng:bestFeaturesList){
+//				hybridBestFeaturesList2.add(ng);
+//				if(c++ >25) break;
+//			}
 
 	    	
 	    	
@@ -143,9 +148,9 @@ public class ExplanationGeneration extends FeatureSelection{
 	    	 * 	2.Cosine based LOG LIKELIHOOD
 	    	 * 	3.Cosine based on term frequencies for Baseline..
 	    	 */
-//			peakModel.explanationGenerationHITS(hybridBestFeaturesList2, peakModel.getDocumentList(), maxTitleHeadline, minTitleHeadline, minN,topMHeadlines);
-	    	peakModel.explanationGenerationCosineLOG(hybridBestFeaturesList2, peakModel.getDocumentList(), lang, maxTitleHeadline, minTitleHeadline, minN,topMHeadlines);
-//	    	peakModel.explanationGenerationMMRCosine(lamdaMMR, hybridBestFeaturesList2, peakModel.getDocumentList(), lang, maxTitleHeadline, minTitleHeadline, minN, topMHeadlines);
+//			peakModel.explanationGenerationHITS(bestFeaturesList, peakModel.getDocumentList(), maxTitleHeadline, minTitleHeadline, minN,topMHeadlines);
+//	    	peakModel.explanationGenerationCosineLOG(bestFeaturesList, peakModel.getDocumentList(), lang, maxTitleHeadline, minTitleHeadline, minN,topMHeadlines);
+	    	peakModel.explanationGenerationMMRCosine(lamdaMMR, bestFeaturesList, peakModel.getDocumentList(), lang, maxTitleHeadline, minTitleHeadline, minN, topMHeadlines);
 	    	
 //	    	peakModel.explanationGenerationCosineTF(bestFeaturesList, burstDocList, lang, maxTitleHeadline, minTitleHeadline, minN,topMHeadlines);
 			
@@ -217,7 +222,11 @@ public class ExplanationGeneration extends FeatureSelection{
 					if(selectedDocIndexes.contains(y)) continue;
 					KbDocument docToCheck = docList.get(y);
 					if(docToCheck.getCosineSimilarity()==0) break;
-					double MMR = l*docToCheck.getCosineSimilarity() - ((1-l) * maxSimFromPreviousSelected(docToCheck,selectedDocs));
+					
+					//CALCULATE DOC DIVERSITY BASED ON ALL FEATURES OR ONLY THE BEST ONESS
+					double MMR =  (l*docToCheck.getCosineSimilarity()) - ((1-l) * maxSimFromPreviousSelected(docToCheck,selectedDocs,bestFeaturesList));
+					//double xQuad = (l*docToCheck.getCosineSimilarity()) + ((1-l) * maxSimFromPreviousSelected(docToCheck,selectedDocs,bestFeaturesList));
+
 					if(MMR>maxMMR){
 						maxMMR = MMR;
 						indexOfMaxMMR = y;
@@ -236,14 +245,33 @@ public class ExplanationGeneration extends FeatureSelection{
 		//diversityyy
 		this.avgDiversity += computeDiversity(selectedDocs);
 		System.out.println("##Diversity:"+ computeDiversity(selectedDocs));
-		Helper.writeLineToFile("nrOfDocsForPeakDetection.txt", computeDiversity(selectedDocs)+"\t", true, true);
+		Helper.writeLineToFile("nrOfDocsForPeakDetection.txt", Helper.round(computeDiversity(selectedDocs),2)+"\t", true, true);
 
 	}
+//	public double xQuadDiversity(List<NGram> bestFeaturesList,List<KbDocument> selectedDocs){
+//		double xQuad = 0.0;
+//		for(NGram ng:bestFeaturesList){
+//			xQuad += ng.getLOG_Likelyhood_corpus() * featurePenalization(selectedDocs, ng);
+//		}
+//		return xQuad;
+//	}
+//	public double featurePenalization(List<KbDocument> selectedDocs,NGram feature){
+//		double featurePenalization = 0.0;
+//		for(KbDocument d : selectedDocs){
+//			featurePenalization*= (1-cosineDocWithBestFeaturesTFbaseline(doc, bestFeaturesList, lang));
+//		}
+//		return featurePenalization;
+//	}
 
-	public double maxSimFromPreviousSelected(KbDocument docToCheck, List<KbDocument> selectedDocs){
+	public double maxSimFromPreviousSelected(KbDocument docToCheck, List<KbDocument> selectedDocs,List<NGram> bestFeaturesList){
 		double maxSim = -100.0;
     	for(KbDocument d : selectedDocs){
+    		//use all the terms as features
    			double cos=cosineDocWithDoc(docToCheck,d);
+   			
+   			//use onluy the beaset features as features
+//   			double cos=cosineDocWithDocUseOnlyBestFeatures(docToCheck, d, bestFeaturesList);
+   			
    			if(cos>maxSim)
    				maxSim = cos;
     	}
@@ -355,6 +383,36 @@ public class ExplanationGeneration extends FeatureSelection{
 		return (double)num / (nv1*nv2);
 	}
 
+	public double cosineDocWithDocUseOnlyBestFeatures(KbDocument doc1,KbDocument doc2,List<NGram> bestFeaturesList){
+		List<String> titleTokens1 = Helper.getGivenLengthNgramsFromList(doc1.getTokenSet(),1);
+		List<String> titleTokens2 = Helper.getGivenLengthNgramsFromList(doc2.getTokenSet(),1);
+		Set<String> allFeaturesSet = new HashSet<String>();allFeaturesSet.addAll(titleTokens1);allFeaturesSet.addAll(titleTokens2);
+
+		double[] vector1 = new double[bestFeaturesList.size()];
+		double[] vector2 = new double[bestFeaturesList.size()];
+		
+		//create vectors
+		int index=0;
+		for(NGram ng : bestFeaturesList){
+			String feature = ng.getNgram();
+			if(titleTokens1.contains(feature)) vector1[index] = 1; else vector1[index] = 0.0;
+			if(titleTokens2.contains(feature)) vector2[index] = 1; else vector2[index] = 0.0;
+			index++;
+		}
+		
+
+		//compute numerator
+		double num = 0.0;
+		for(int i=0;i<vector1.length;i++)
+			num += vector1[i] * vector2[i];
+		//normalized vector
+		double nv1 = getNormVector(vector1);
+		double nv2 = getNormVector(vector2);
+		//cosine
+		if(nv1==0 || nv2==0) return 0.0;
+		return (double)num / (nv1*nv2);
+	}
+
 	/**
 	 * 
 	 * @param doc
@@ -432,21 +490,18 @@ public class ExplanationGeneration extends FeatureSelection{
 		
 		int c=1;
 		for(KbDocument doc:docList){
-//			if(method.equals("HITS"))
-//				System.out.println(doc.getHitCounts()+"\t"+doc.getTitle()+"\t");
-//			if(method.equals("COSINE"))
-//				System.out.println(doc.getCosineSimilarity()+"\t"+doc.getTitle()+"\t");
-
+			if(method.equals("HITS") && doc.getHitCounts()==0)break;
+			if(method.equals("COSINE") && doc.getCosineSimilarity()==0.0)break;	
 			System.out.println(doc.getTitle());
-
+			
 			bestdocList.add(doc);
 			if(c++ >= topMHeadlines) break;
 		}
 		
 		//diversityyy
-		this.avgDiversity += computeDiversity(bestdocList);
-		System.out.println("##Diversity:"+ computeDiversity(bestdocList));
-		Helper.writeLineToFile("nrOfDocsForPeakDetection.txt", computeDiversity(bestdocList)+"\t", true, true);
+		this.avgDiversity += Helper.round(computeDiversity(bestdocList),2);
+		System.out.println("##Diversity:"+ Helper.round(computeDiversity(bestdocList),2));
+		Helper.writeLineToFile("nrOfDocsForPeakDetection.txt", Helper.round(computeDiversity(bestdocList),2)+"\t", true, true);
 
 	}
 

@@ -95,9 +95,12 @@ public class NGramIndexSearch implements Runnable {
 			   }
 			 });
 
-		
-		if(docIds.size()==0)
-			return;
+		//unknown features
+		if(docIds.size()==0){
+//			ngram.setTf_peak(10);
+//			ngram.setTf_corpus(10);
+//			ngram.setNr_of_years_appearance(10);
+		}
 		else{
 //			int docId = hits[0].doc;
 			final Document doc = searcher.doc(docIds.get(0));

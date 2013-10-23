@@ -40,7 +40,7 @@ public class SearchKbNgramIndex {
 		String fileWithTotalTFperYear = "/Users/mimis/Development/EclipseProject/PeakModel/index/PeakPeriodTFIndex/peakPeriodTFbigrams.tsv";
 		
 		String firstLine = "year:";
-		String ngramText = "verlovingsfoto van";
+		String ngramText = "verloving beatrix";
 		String[] allArr = new String[195];
 //		Set<String> ngramSet = Helper.readFileLineByLineReturnSetOfLineString("/Users/mimis/Desktop/csvBurst.txt");
 //		for(String ngramText:ngramSet){
